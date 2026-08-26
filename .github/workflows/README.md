@@ -11,6 +11,7 @@ The repo's automation, migrated from the retired Azure DevOps pipelines
 | [release-please.yml](release-please.yml) | push to `main` | Automated releases from Conventional Commits: opens the **release PR** (SemVer bump + CHANGELOG); merging it creates the tag + GitHub Release and chains the assets build. |
 | [release.yml](release.yml) | `v*` tag push · called by Release Please | **Release Assets** — terraform-docs bundle attached to the release (creates the release with git-log notes when a tag is pushed by hand). |
 | [terraform-docs.yml](terraform-docs.yml) | push to `main` touching `modules/**/*.tf` · manual | Regenerates every submodule README's inputs/outputs block (`BEGIN_TF_DOCS` markers); opens a `docs/terraform-docs` PR only when something changed. |
+| [scorecard.yml](scorecard.yml) | push to `main` · Mon 05:30 UTC · manual | OpenSSF Scorecard supply-chain posture score → Code Scanning + README badge; flags hardening regressions. |
 | [provider-freshness.yml](provider-freshness.yml) | Mon 06:00 UTC · manual | Advisory report of latest azurerm/azapi/time versions vs pinned `~>` ranges; files an Issue for a new **major** (Renovate won't PR those). |
 
 Dependency PRs themselves come from the **Renovate GitHub App** (see below),
@@ -73,13 +74,26 @@ release-please PR so a `v0.1.0` tag is created):
   to trigger CI as yourself, or store a fine-grained PAT
   (contents + pull-requests: write) as the `RELEASE_PLEASE_TOKEN` secret.
 
-### 5. Security features (public repo — already wired)
-
-The repo is **public**, so these come free and are already active:
+### 5. Security posture (already wired)
 
 - **Code Scanning** — [iac-security.yml](iac-security.yml) uploads the
-  Checkov/Trivy SARIF (`upload-sarif`); findings appear as inline PR
-  annotations and in the Security tab.
-- **Secret scanning + push protection** — enabled on the repo; pushes
-  containing a recognised credential (Azure client secret, PAT, …) are
-  blocked at the push.
+  Checkov/Trivy SARIF; [scorecard.yml](scorecard.yml) adds the OpenSSF
+  supply-chain score. Findings appear as PR annotations + Security tab.
+- **Secret scanning + push protection** — pushes containing a recognised
+  credential (Azure client secret, PAT, …) are blocked at the push.
+- **Actions supply chain** — every action pinned by commit SHA (Renovate
+  maintains the digests, 3-day cool-down on action releases); repo policy
+  only allows GitHub-owned actions + an explicit allowlist
+  (`hashicorp/setup-terraform`, `googleapis/release-please-action`,
+  `peter-evans/create-pull-request`, `azure/login`, `ossf/scorecard-action`).
+  Add any new action to BOTH a workflow (SHA-pinned) and this allowlist
+  (Settings → Actions → General, or the selected-actions API).
+- **Fork PRs** — workflow runs from ALL outside collaborators require
+  maintainer approval before executing.
+- **Tag ruleset** — `v*` tags cannot be deleted or moved (releases are
+  immutable de facto; the registry and git-ref consumers stay safe).
+- **Release provenance** — the terraform-docs bundle is attested via
+  Sigstore ([release.yml](release.yml)); verify with
+  `gh attestation verify <file> -R Kumo-Craft/terraform-azurerm-landing-zone`.
+- **Still manual (org owner)**: enforce 2FA — org Settings →
+  Authentication security → Require two-factor authentication.

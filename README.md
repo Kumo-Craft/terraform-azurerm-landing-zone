@@ -1,5 +1,7 @@
 # Terraform Azure Landing Zone
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Kumo-Craft/terraform-azurerm-landing-zone/badge)](https://scorecard.dev/viewer/?uri=github.com/Kumo-Craft/terraform-azurerm-landing-zone)
+
 Production-ready Azure landing zone authored as an **[AVM](https://azure.github.io/Azure-Verified-Modules/)-style monorepo** — a thin root module that bootstraps the foundational resource group, plus **62 submodules** under [`./modules/`](./modules/) covering the full CAF Enterprise Scale footprint (networking, compute, AVD, identity, security, monitoring, governance/policy, NVA).
 
 Built for [Terragrunt](https://terragrunt.gruntwork.io/) isolation but usable standalone with any Terraform workflow.
