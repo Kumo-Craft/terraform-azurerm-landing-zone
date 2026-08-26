@@ -65,13 +65,14 @@ jobs:
             DIFF=$(git ls-files 'modules/*' '*.tf')
           fi
 
-          # 1) Submodules under modules/ that changed.
-          #    Path shape: modules/<Name>/...  → field 2 is <Name>.
+          # 1) Submodules under modules/ whose CODE changed — only .tf/.hcl
+          #    files count (README/docs-only changes must not trigger a
+          #    validate sweep). Path shape: modules/<Name>/... → field 2.
           #    Trailing `|| true`: a docs-only / non-module PR makes the
           #    grep match nothing (exit 1), which under `pipefail`+`set -e`
           #    would abort the whole step. Swallow it so MODULES is just "".
           MODULES=$(echo "$DIFF" \
-            | grep -E '^modules/[^/]+/' \
+            | grep -E '^modules/[^/]+/.*\.(tf|hcl)$' \
             | cut -d'/' -f2 \
             | sort -u \
             | while read -r mod; do [ -f "modules/$mod/main.tf" ] && echo "$mod"; done) || true
