@@ -158,3 +158,77 @@ inputs = {
 | inbound_endpoint_id | The ID of the inbound endpoint |
 | outbound_endpoint_id | The ID of the outbound endpoint (null if not created) |
 | forwarding_ruleset_id | The ID of the DNS forwarding ruleset (null if not created) |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_private_dns_resolver.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver) | resource |
+| [azurerm_private_dns_resolver_dns_forwarding_ruleset.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver_dns_forwarding_ruleset) | resource |
+| [azurerm_private_dns_resolver_forwarding_rule.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver_forwarding_rule) | resource |
+| [azurerm_private_dns_resolver_inbound_endpoint.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver_inbound_endpoint) | resource |
+| [azurerm_private_dns_resolver_outbound_endpoint.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver_outbound_endpoint) | resource |
+| [azurerm_private_dns_resolver_virtual_network_link.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_resolver_virtual_network_link) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| inbound\_subnet\_id | Subnet ID for the inbound endpoint (Microsoft.Network/dnsResolvers delegation required) | `string` | n/a | yes |
+| location | Azure region | `string` | n/a | yes |
+| resource\_group\_name | Name of the pre-existing resource group in which to deploy the resolver. | `string` | n/a | yes |
+| virtual\_network\_id | VNet ID in which to deploy the resolver | `string` | n/a | yes |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| forwarding\_rules | Map of DNS forwarding rules. Key = rule name.<br>Requires outbound\_subnet\_id to be set.<br><br>- `domain_name`        - (Required) FQDN to forward (must end with ".").<br>- `target_dns_servers`  - (Required) List of target DNS servers.<br>- `enabled`             - (Optional) Enable the rule. Defaults to true. | <pre>map(object({<br>    domain_name = string<br>    target_dns_servers = list(object({<br>      ip_address = string<br>      port       = optional(number, 53)<br>    }))<br>    enabled = optional(bool, true)<br>  }))</pre> | `{}` | no |
+| inbound\_private\_ip | Static private IP for the inbound endpoint. If null, dynamic allocation. | `string` | `null` | no |
+| lock | Controls the Resource Lock configuration for this resource.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name. If null, computed from naming components. | `string` | `null` | no |
+| outbound\_subnet\_id | Subnet ID for the outbound endpoint. If null, no outbound endpoint is created. | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the DNS Private Resolver scope. Default principal\_type='ServicePrincipal'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| ruleset\_vnet\_links | Map of name => VNet ID to link to the forwarding ruleset. | `map(string)` | `{}` | no |
+| subscription\_acronym | Subscription acronym (e.g. con) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload component for naming convention {type}-{acr}-{env}-{region}-{workload}. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| forwarding\_ruleset\_id | The ID of the DNS forwarding ruleset (null if not created) |
+| id | The ID of the DNS Private Resolver |
+| inbound\_endpoint\_id | The ID of the inbound endpoint |
+| inbound\_endpoint\_ip | The private IP address of the inbound endpoint (use as DNS forwarder). Available after apply. For dynamic allocation (default), the IP is computed and known only post-create. |
+| lock\_id | The resource ID of the management lock (null if no lock configured) |
+| name | The name of the DNS Private Resolver |
+| outbound\_endpoint\_id | The ID of the outbound endpoint (null if not created) |
+| resource | The complete DNS Private Resolver resource object |
+| role\_assignment\_ids | Map of role assignment key => role assignment resource ID |
+<!-- END_TF_DOCS -->

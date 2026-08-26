@@ -79,3 +79,69 @@ inputs = {
 | dcr_id | The ID of the Data Collection Rule |
 | dcr_name | The name of the Data Collection Rule |
 | resource | Complete Data Collection Rule resource object |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_alert_prometheus_rule_group.k8s_recording](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_alert_prometheus_rule_group) | resource |
+| [azurerm_monitor_alert_prometheus_rule_group.node_recording](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_alert_prometheus_rule_group) | resource |
+| [azurerm_monitor_data_collection_rule.prometheus](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_data_collection_rule) | resource |
+| [azurerm_monitor_data_collection_rule_association.dce](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_data_collection_rule_association) | resource |
+| [azurerm_monitor_data_collection_rule_association.prometheus](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_data_collection_rule_association) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| aks\_cluster\_id | ID of the AKS cluster to collect Prometheus metrics from | `string` | n/a | yes |
+| aks\_cluster\_name | Name of the AKS cluster (used in recording rule group names) | `string` | n/a | yes |
+| data\_collection\_endpoint\_id | ID of the Data Collection Endpoint (from AMW default\_data\_collection\_endpoint\_id) | `string` | n/a | yes |
+| location | Azure region | `string` | n/a | yes |
+| monitor\_workspace\_id | ID of the Azure Monitor Workspace (Prometheus destination) | `string` | n/a | yes |
+| resource\_group\_name | Resource group for the Data Collection Rule | `string` | n/a | yes |
+| enable\_recording\_rules | Enable recommended Prometheus recording rules for Kubernetes | `bool` | `true` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the DCR. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit DCR name override (escape hatch). If null, derived from naming convention via ../Naming. | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. api, mgm) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix (e.g. prometheus) | `string` | `"prometheus"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| dcr\_id | The ID of the Data Collection Rule |
+| dcr\_name | The name of the Data Collection Rule |
+| id | DCR resource ID (alias for dcr\_id, sibling convention). |
+| lock\_id | Resource lock ID when var.lock is set, otherwise null. |
+| resource | The complete Data Collection Rule resource object |
+<!-- END_TF_DOCS -->

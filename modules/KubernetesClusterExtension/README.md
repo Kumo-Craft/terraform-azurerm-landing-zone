@@ -134,3 +134,62 @@ A `CanNotDelete` lock on the extension resource **will block extension uninstall
 | azurerm_kubernetes_cluster_extension.this | resource |
 | module.lock | module |
 | module.role_assignments (for_each) | module |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| role\_assignments | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_kubernetes_cluster_extension.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster_extension) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| cluster\_id | Full resource ID of the target AKS cluster. For Arc-enabled clusters (Microsoft.Kubernetes/connectedClusters), use the sibling azurerm\_arc\_kubernetes\_cluster\_extension resource instead — this module only supports Azure-managed AKS (Microsoft.ContainerService/managedClusters). | `string` | n/a | yes |
+| extension\_type | Extension type (case-sensitive). Examples:<br>  - "Microsoft.ArgoCD"   (Argo CD GitOps, currently Preview)<br>  - "microsoft.flux"     (Flux v2 GitOps, GA)<br>  - "Microsoft.Dapr"     (Dapr runtime)<br>  - "Microsoft.AzureML.Kubernetes"  (Azure Machine Learning)<br>See: https://learn.microsoft.com/azure/aks/cluster-extensions | `string` | n/a | yes |
+| name | Name of the extension instance on the cluster (e.g. "argocd", "flux"). | `string` | n/a | yes |
+| configuration\_protected\_settings | Sensitive configuration settings (SSH keys, OAuth secrets, etc.). Stored encrypted by Azure. NOTE: azurerm provider 4.75.0 does not mark configuration\_protected\_settings as sensitive on the resource — values will appear in Terraform state plaintext. Use a secure state backend (Azure Blob with SSE/CMK). | `map(string)` | `{}` | no |
+| configuration\_settings | Public configuration settings forwarded to the extension. Keys vary per extension (see MS docs). | `map(string)` | `{}` | no |
+| extension\_version | Pin a specific extension version (e.g. "1.0.0-preview"). Mutually exclusive with release\_train. Named extension\_version (not version) because version is a reserved name on module blocks. | `string` | `null` | no |
+| lock | Optional management lock on the extension resource. Note: a CanNotDelete lock will BLOCK extension uninstall/upgrade pipelines — use sparingly. | <pre>object({<br>    name = optional(string)<br>    kind = string<br>  })</pre> | `null` | no |
+| plan | Marketplace plan, if the extension is a paid Kubernetes app (typically null for first-party Microsoft extensions like Argo CD/Flux). | <pre>object({<br>    name           = string<br>    product        = string<br>    publisher      = string<br>    promotion_code = optional(string)<br>    version        = optional(string)<br>  })</pre> | `null` | no |
+| release\_namespace | Namespace to install the extension into (cluster-scoped install). Mutually exclusive with target\_namespace. | `string` | `null` | no |
+| release\_train | Release train: "Stable" (default), "Preview", or other extension-specific train (e.g. ArgoCD currently uses Preview). | `string` | `null` | no |
+| role\_assignments | Map of role assignments. Scope defaults to the extension resource if not specified<br>(grant access TO the extension). Set scope to an external resource ID (ACR, KV, Storage)<br>to grant the extension's MSI access to that resource — use<br>module.kce.aks\_assigned\_identity[0].principal\_id as principal\_id.<br><br>- `role_definition_id_or_name`             - (Required) The ID or name of the role definition.<br>- `principal_id`                           - (Required) The ID of the principal to assign the role to.<br>- `scope`                                  - (Optional) Target resource ID. Defaults to the extension resource ID.<br>- `principal_type`                         - (Optional) User, Group, ServicePrincipal, ForeignGroup, or Device.<br>- `condition`                              - (Optional) ABAC condition expression.<br>- `condition_version`                      - (Optional) Condition version ("2.0").<br>- `description`                            - (Optional) Description.<br>- `skip_service_principal_aad_check`       - (Optional) Skip AAD check for service principals.<br>- `delegated_managed_identity_resource_id` - (Optional) Cross-tenant delegated MSI resource ID. | <pre>map(object({<br>    role_definition_id_or_name             = string<br>    principal_id                           = string<br>    scope                                  = optional(string, null)<br>    principal_type                         = optional(string, "ServicePrincipal")<br>    condition                              = optional(string, null)<br>    condition_version                      = optional(string, null)<br>    description                            = optional(string, null)<br>    skip_service_principal_aad_check       = optional(bool, false)<br>    delegated_managed_identity_resource_id = optional(string, null)<br>  }))</pre> | `{}` | no |
+| target\_namespace | Single namespace to scope the extension to (namespace-scoped install). Mutually exclusive with release\_namespace. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| aks\_assigned\_identity | Extension's system-assigned managed identity (principal\_id, tenant\_id, type). Empty list if no identity assigned by Azure (depends on extension type). |
+| current\_version | Currently installed extension version (read after apply). |
+| id | Resource ID of the cluster extension. |
+| lock\_id | Resource lock ID when var.lock is set, otherwise null. |
+| name | Extension name on the cluster. |
+| resource | The azurerm\_kubernetes\_cluster\_extension resource. |
+| role\_assignment\_ids | Map of role assignment IDs keyed by the var.role\_assignments map key. |
+<!-- END_TF_DOCS -->

@@ -93,3 +93,43 @@ inputs = {
 |------|-------------|
 | ids | Map of peering key => peering ID |
 | resources | Map of peering key => complete peering resource object |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_virtual_network_peering.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network_peering) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| peerings | Map of VNet peerings to create. The map key is the peering name.<br><br>- `virtual_network_name`                  - (Required) Local VNet name.<br>- `resource_group_name`                   - (Required) Local VNet resource group name.<br>- `remote_virtual_network_id`             - (Required) Remote VNet resource ID.<br>- `name`                                  - (Optional) Azure-side peering name override. Defaults to the map key. Use this when the map key is a fixed/internal identifier (e.g. composition from a Stack module) but the Azure-side resource name needs to differ.<br>- `allow_forwarded_traffic`               - (Optional) Allow forwarded traffic. Defaults to true.<br>- `allow_gateway_transit`                 - (Optional) Allow gateway transit. Defaults to false.<br>- `allow_virtual_network_access`          - (Optional) Allow VNet access. Defaults to true.<br>- `use_remote_gateways`                   - (Optional) Use remote gateways. Defaults to false.<br>- `triggers`                              - (Optional) Map of arbitrary strings that, when changed, force the peering to be re-created. Use to trigger re-evaluation when the remote VNet address space expands (workaround for the silent Disconnected state Azure produces). Defaults to {}.<br>- `peer_complete_virtual_networks_enabled`- (Optional) Controls full-VNet vs subnet-scoped peering. Defaults to true (full-VNet, preserves current behavior). Set to false to enable subnet-scoped peering and supply local\_subnet\_names / remote\_subnet\_names.<br>- `local_subnet_names`                    - (Optional) List of local subnet names to include in a subnet-scoped peering. Only valid when peer\_complete\_virtual\_networks\_enabled = false. Defaults to [].<br>- `remote_subnet_names`                   - (Optional) List of remote subnet names to include in a subnet-scoped peering. Only valid when peer\_complete\_virtual\_networks\_enabled = false. Defaults to [].<br>- `only_ipv6_peering_enabled`             - (Optional) Restrict peering to IPv6 traffic only. Defaults to false. | <pre>map(object({<br>    virtual_network_name                   = string<br>    resource_group_name                    = string<br>    remote_virtual_network_id              = string<br>    name                                   = optional(string)<br>    allow_forwarded_traffic                = optional(bool, true)<br>    allow_gateway_transit                  = optional(bool, false)<br>    allow_virtual_network_access           = optional(bool, true)<br>    use_remote_gateways                    = optional(bool, false)<br>    triggers                               = optional(map(string), {})<br>    peer_complete_virtual_networks_enabled = optional(bool, true)<br>    local_subnet_names                     = optional(list(string), [])<br>    remote_subnet_names                    = optional(list(string), [])<br>    only_ipv6_peering_enabled              = optional(bool, false)<br>  }))</pre> | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of peering key => peering ID |
+| resources | Map of peering key => complete peering resource object |
+<!-- END_TF_DOCS -->

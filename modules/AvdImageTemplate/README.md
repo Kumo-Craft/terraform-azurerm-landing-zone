@@ -149,3 +149,61 @@ Typically this is wired into a scheduled workflow so the image is rebuilt from `
 |---|---|
 | terraform | >= 1.12.0 |
 | azapi | ~> 2.4 |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azapi | ~> 2.4 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azapi_resource.template](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| identity\_ids | User-assigned managed identity resource IDs granted to the image template. At least one; it must have permission to write image versions into the target gallery. | `list(string)` | n/a | yes |
+| image\_definition\_id | galleryImageId — the Compute Gallery image DEFINITION ID (automatic versioning), e.g. .../galleries/<gal>/images/<def>. Append /versions/<x.y.z> for explicit versioning. | `string` | n/a | yes |
+| location | Region where the image template (and the MS-managed build) runs. Must be a region the target gallery replicates to. | `string` | n/a | yes |
+| resource\_group\_id | Resource ID of the resource group that holds the image template (azapi parent\_id). | `string` | n/a | yes |
+| template\_name | Name of the image template. | `string` | n/a | yes |
+| auto\_run\_enabled | When true, sets properties.autoRun.state = Enabled so Azure automatically starts a build on template CREATE or UPDATE (server-side, async — does not block the apply). Leave false and drive builds from a scheduled pipeline for cadence (rebuild from `latest`). Note: it re-triggers on every template update. | `bool` | `false` | no |
+| build\_timeout\_minutes | Maximum build duration (all customizers + distribution). 0 = service default (4h). | `number` | `120` | no |
+| customizers | Ordered list of customization steps. Each provides script\_uri (github/SAS URI) or inline commands. Trusted script hosting: use a SAS URI or a github raw URL reachable from the MS-managed build VM. | <pre>list(object({<br>    name             = string<br>    type             = optional(string, "PowerShell") # PowerShell | Shell<br>    script_uri       = optional(string)<br>    inline           = optional(list(string))<br>    sha256_checksum  = optional(string)<br>    run_elevated     = optional(bool)         # PowerShell only<br>    run_as_system    = optional(bool)         # PowerShell only<br>    valid_exit_codes = optional(list(number)) # PowerShell only<br>  }))</pre> | `[]` | no |
+| exclude\_from\_latest | If true, the produced image version is not marked as 'latest' in the gallery definition. | `bool` | `false` | no |
+| os\_disk\_size\_gb | OS disk size (GB) of the build VM. 0 = image default. | `number` | `128` | no |
+| run\_output\_name | Unique runOutput name to query the distribution result. Null = defaults to template\_name. | `string` | `null` | no |
+| source\_image | Base marketplace (PlatformImage) image to build from. Default: the Win11 25H2 AVD M365 multi-session image. | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>    version   = optional(string, "latest")<br>  })</pre> | <pre>{<br>  "offer": "office-365",<br>  "publisher": "microsoftwindowsdesktop",<br>  "sku": "win11-25h2-avd-m365",<br>  "version": "latest"<br>}</pre> | no |
+| source\_plan | Purchase plan (planInfo) for the source image. Required when the marketplace image carries purchase terms (the office-365 M365 AVD image does). Leave null for first-party images with no plan. Accept terms once: `az vm image terms accept`. | <pre>object({<br>    name      = string # planName<br>    product   = string # planProduct<br>    publisher = string # planPublisher<br>  })</pre> | `null` | no |
+| staging\_resource\_group\_id | Optional staging resource group ID for the build. Null = AIB creates a randomly-named staging RG (MS-managed). If set, the RG must be empty and in the same region/subscription. | `string` | `null` | no |
+| tags | Tags applied to the image template and set as distribution artifactTags. | `map(string)` | `{}` | no |
+| target\_regions | Gallery replication targets. One entry MUST be the gallery's home region. Empty = defaults to a single replica in var.location. | <pre>list(object({<br>    name                 = string<br>    replica_count        = optional(number, 1)<br>    storage_account_type = optional(string, "Standard_LRS")<br>  }))</pre> | `[]` | no |
+| vm\_size | Size of the ephemeral build VM. Pick a size available in var.location. Empty string = service default (Standard\_D2ds\_v4 for Gen2). | `string` | `"Standard_D4as_v7"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| image\_definition\_id | The Compute Gallery image definition the build distributes into (echo of input). |
+| run\_output\_name | The distribution runOutput name — query it post-build for the produced image version details. |
+| template\_id | Resource ID of the image template. |
+| template\_name | Name of the image template. |
+<!-- END_TF_DOCS -->

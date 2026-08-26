@@ -66,3 +66,46 @@ The deploying principal MUST have either:
 - **Family scope gap (F-6 from review):** This module covers ONLY workspace association. Defender plans (`azurerm_security_center_subscription_pricing`), settings (`azurerm_security_center_setting` for MCAS/WDATP), and contact notifications (`azurerm_security_center_contact`) are NOT exposed. Callers needing Defender Standard tier plans must wire those resources externally OR file a feature request for a `SecurityCenterSubscription` companion module.
 
 - **Deprecation note:** `azurerm_security_center_auto_provisioning` is deprecated in azurerm 4.75.0 and will be removed in 5.0. This module does NOT use it — Defender plan + AMA via DCR is the replacement pattern (see `../AlzManagement` for DCR wiring).
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_security_center_workspace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/security_center_workspace) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| log\_analytics\_workspace\_id | Full Azure resource ID of the Log Analytics Workspace receiving Defender for Cloud data (e.g. the central law-mgm-{env}-gwc-01). | `string` | n/a | yes |
+| subscription\_id | Subscription where the Defender for Cloud default workspace setting applies. Accepts either a bare GUID or the full /subscriptions/<guid> path. | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | Resource ID of the workspaceSettings (always .../workspaceSettings/default). |
+| resource | Full azurerm\_security\_center\_workspace resource object. |
+| scope | Subscription scope this setting applies to. |
+| workspace\_id | Log Analytics Workspace resource ID receiving Defender for Cloud data. |
+<!-- END_TF_DOCS -->

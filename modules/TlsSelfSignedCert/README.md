@@ -182,3 +182,73 @@ resource "azurerm_role_assignment" "app_routing_kv_secrets_user" {
 | cert_pem | PEM-encoded X.509 certificate (public portion only). |
 | lock_id | Resource ID of the management lock (null if not configured). |
 | role_assignment_ids | Map of role assignment key => resource ID. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| tls | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| tls | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_key_vault_certificate.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_certificate) | resource |
+| [tls_private_key.this](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
+| [tls_self_signed_cert.this](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/self_signed_cert) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| common\_name | Subject CN of the certificate (e.g. `*.shc.az.epttst.lu`). Goes into the cert's distinguished name. Wildcard CN is accepted but modern browsers/clients rely on Subject Alternative Names — always populate `dns_names` as well. | `string` | n/a | yes |
+| key\_vault\_id | Resource ID of the Key Vault that will host the certificate. | `string` | n/a | yes |
+| cert\_name | Name of the certificate inside the Key Vault. Must be unique per KV and match `[a-zA-Z0-9-]{1,127}`. If null, a name is computed from subscription\_acronym/environment/region\_code/workload as cert-{acr}-{env}-{region}-{workload}. | `string` | `null` | no |
+| dns\_names | Subject Alternative Names (DNS). Modern TLS clients verify the SAN list, not the CN. Include the wildcard and any specific hostnames the cert should be valid for. Example: ["*.shc.az.epttst.lu", "shc.az.epttst.lu"]. | `list(string)` | `[]` | no |
+| early\_renewal\_hours | Hours before expiry to trigger renewal at next plan/apply. 0 = no early renewal (cert renewed only after expiry). For shorter validity\_days (e.g. 90 days), consider 168 (7 days) to give CI time to roll out the new cert. | `number` | `0` | no |
+| environment | Environment (e.g. prod, nprd). Used for computed naming when var.cert\_name is null. | `string` | `null` | no |
+| ip\_addresses | Subject Alternative Names (IP). Rarely needed for ingress certs. | `list(string)` | `[]` | no |
+| key\_size | RSA key size in bits. | `number` | `2048` | no |
+| location | Azure region (e.g. germanywestcentral). Passed to the Naming submodule when used. | `string` | `null` | no |
+| lock | Controls the Resource Lock configuration for this resource.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| organization | Subject O field. Cosmetic — shown in cert viewers. | `string` | `"Post Luxembourg"` | no |
+| region\_code | Region code (e.g. gwc, weu). Used for computed naming when var.cert\_name is null. | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the Key Vault certificate scope. Default principal\_type='ServicePrincipal'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm). Used for computed naming when var.cert\_name is null. | `string` | `null` | no |
+| tags | Tags applied to the Key Vault certificate object. | `map(string)` | `{}` | no |
+| validity\_days | Cert validity in days. Default 365 (1 year) — the modern recommended baseline (aligns with CAB Forum BR-style guidance for short-lived certs). Increase ONLY if you have a documented rotation deferral. Range: 1-3650. | `number` | `365` | no |
+| workload | Workload component (e.g. management). Used for computed naming when var.cert\_name is null. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| cert\_pem | PEM-encoded X.509 certificate (public). Safe to expose; useful for downstream consumers that need to trust the self-signed CA (e.g. kubectl --certificate-authority). |
+| certificate\_id | Full resource ID of the imported Key Vault certificate. |
+| certificate\_name | Name of the Key Vault certificate. |
+| certificate\_versionless\_id | Versionless KV certificate ID (e.g. https://<kv>.vault.azure.net/certificates/<name>). Use this in the Ingress annotation `kubernetes.azure.com/tls-cert-keyvault-uri` so the App Routing CSI driver always pulls the latest version. |
+| lock\_id | Resource ID of the management lock (null if no lock configured). |
+| resource | Complete azurerm\_key\_vault\_certificate resource object. Use this for composition — e.g. referencing the certificate in downstream modules. |
+| role\_assignment\_ids | Map of role assignment key => role assignment resource ID. |
+| secret\_versionless\_id | Versionless KV SECRET URI for the cert (e.g. https://<kv>.vault.azure.net/secrets/<name>). The App Routing addon's `kubernetes.azure.com/tls-cert-keyvault-uri` annotation accepts either the certificate or the secret URI — the secret form is what the CSI driver actually fetches under the hood. |
+<!-- END_TF_DOCS -->

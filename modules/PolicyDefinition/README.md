@@ -106,3 +106,43 @@ parameters = {
 |------|---------|
 | terraform | >= 1.12.0 |
 | azurerm | ~> 4.0 |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_policy_definition.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/policy_definition) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| definitions | Map of custom policy definitions. Key = definition name (Azure-side resource name; semantic logical key).<br><br>Scope: omit management\_group\_id for subscription-scoped definitions; set it for MG-scoped.<br><br>- display\_name        : (Required) Human-readable name visible in the portal.<br>- policy\_rule         : (Required) The policy rule as a Terraform object — module jsonencodes it.<br>                        Example: { if = { field = "type", equals = "Microsoft.Compute/virtualMachines" }, then = { effect = "audit" } }<br>- description         : (Optional) Description visible in the portal.<br>- mode                : (Optional, default "All") Evaluation mode.<br>                        Enum: All, Indexed, Microsoft.Kubernetes.Data, Microsoft.KeyVault.Data, Microsoft.Network.Data.<br>- metadata            : (Optional) Free-form key-value metadata. Module jsonencodes.<br>- parameters          : (Optional) Parameter definitions as Terraform object — module jsonencodes.<br>                        Example: { tagName = { type = "String", metadata = { displayName = "Tag Name" } } }<br>- policy\_type         : (Optional, default "Custom") Enum: Custom, BuiltIn, NotSpecified, Static.<br>                        Almost always Custom for caller-authored definitions.<br>- management\_group\_id : (Optional) When set, definition is MG-scoped. Omit for subscription scope. | <pre>map(object({<br>    # Required<br>    display_name = string<br>    policy_rule  = any # caller passes as object/map; module jsonencodes<br><br>    # Scope — null = subscription-scoped (provider's subscription),<br>    #         else full MG resource ID = MG-scoped<br>    management_group_id = optional(string)<br><br>    # Optional<br>    description = optional(string)<br>    mode        = optional(string, "All")<br>    metadata    = optional(map(string))<br>    parameters  = optional(any) # caller passes as object/map; module jsonencodes<br>    policy_type = optional(string, "Custom")<br>  }))</pre> | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| definition\_ids | Map of definition name => Azure resource ID. Use as input to PolicySetDefinition.set\_definitions[].policy\_definition\_references[].policy\_definition\_id or PolicyAssignment.assignments[].policy\_definition\_id. |
+| definition\_names | Map of definition name => Azure-side resource name (map key passthrough). |
+<!-- END_TF_DOCS -->

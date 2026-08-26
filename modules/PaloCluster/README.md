@@ -288,3 +288,136 @@ The v0.2.24 module exposed `output "resource"` as the raw `azurerm_resource_grou
 ### `output "resource_group_id"` removed
 
 The v0.2.24 module exposed `output "resource_group_id"`. This is removed in v0.2.25. If you need the RG ID, add a `data "azurerm_resource_group" "this"` lookup in your root config.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| random | >= 3.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| random | >= 3.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| des\_crypto | ../RoleAssignment | n/a |
+| ilb\_lock | ../ResourceLock | n/a |
+| kv | ../KeyVault | n/a |
+| kv\_admin | ../RoleAssignment | n/a |
+| kv\_secrets\_reader | ../RoleAssignment | n/a |
+| naming | ../Naming | n/a |
+| panos\_appinsights | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_application_insights.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/application_insights) | resource |
+| [azurerm_disk_encryption_set.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/disk_encryption_set) | resource |
+| [azurerm_key_vault_key.des](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_key) | resource |
+| [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) | resource |
+| [azurerm_key_vault_secret.vwan_bgp_peer_asn](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) | resource |
+| [azurerm_key_vault_secret.vwan_bgp_peer_ips](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) | resource |
+| [azurerm_lb.trust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/lb) | resource |
+| [azurerm_lb_backend_address_pool.trust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/lb_backend_address_pool) | resource |
+| [azurerm_lb_probe.trust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/lb_probe) | resource |
+| [azurerm_lb_rule.ha_ports](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/lb_rule) | resource |
+| [azurerm_linux_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine) | resource |
+| [azurerm_marketplace_agreement.palo](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/marketplace_agreement) | resource |
+| [azurerm_network_interface.mgmt](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_network_interface.trust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_network_interface.untrust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_network_interface_backend_address_pool_association.trust](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface_backend_address_pool_association) | resource |
+| [azurerm_role_definition.panos_appinsights](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_definition) | resource |
+| [azurerm_user_assigned_identity.des](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |
+| [random_password.admin](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [time_offset.des_key_expiry](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/offset) | resource |
+| [time_offset.vwan_secret_expiry](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/offset) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_subscription.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/subscription) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment (e.g. prod, nprd) | `string` | n/a | yes |
+| firewalls | Map of firewall instances to deploy.<br>The key is the name suffix (e.g. "obew-01", "obew-02").<br>Example:<br>  firewalls = {<br>    "fw-01" = { mgmt\_ip = "x.x.x.4",  untrust\_ip = "x.x.x.20", trust\_ip = "x.x.x.37", zone = "1" }<br>    "fw-02" = { mgmt\_ip = "x.x.x.5",  untrust\_ip = "x.x.x.21", trust\_ip = "x.x.x.38", zone = "2" }<br>  } | <pre>map(object({<br>    mgmt_ip    = string<br>    untrust_ip = string<br>    trust_ip   = string<br>    zone       = optional(string)<br>  }))</pre> | n/a | yes |
+| ilb\_frontend\_ip | Static private IP for the ILB frontend in the trust subnet (e.g. 10.238.200.36). | `string` | n/a | yes |
+| location | Azure region (e.g. germanywestcentral). | `string` | n/a | yes |
+| region\_code | Region code (e.g. gwc) | `string` | n/a | yes |
+| resource\_group\_name | Existing resource group name (caller-provided).<br><br>PaloCluster v0.2.25+ no longer creates the RG — caller must supply<br>an existing one. Create via ../ResourceGroup in your root module<br>if needed.<br><br>Migration from v0.2.24 and earlier: see README "Breaking changes (v0.2.25)"<br>for the state-preserving migration recipe using `removed { lifecycle.destroy=false }`. | `string` | n/a | yes |
+| subnet\_mgmt\_id | Management subnet ID for management NICs. | `string` | n/a | yes |
+| subnet\_trust\_id | Trust subnet ID for internal NICs (ILB). | `string` | n/a | yes |
+| subnet\_untrust\_id | Untrust subnet ID for external NICs. | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym (e.g. con) | `string` | n/a | yes |
+| workload | Workload / cluster name (e.g. palo-obew, palo-in) | `string` | n/a | yes |
+| accelerated\_networking | Enable accelerated networking on dataplane NICs (untrust + trust). Strongly recommended by Palo Alto for DPDK throughput. | `bool` | `true` | no |
+| accept\_marketplace\_agreement | Accept the Azure Marketplace agreement for Palo Alto VM-Series.<br><br>Set to true on FIRST deployment per subscription. Subsequent deployments<br>can leave this false (the agreement persists at subscription level).<br><br>If the agreement was accepted out-of-band (Azure portal, or pre-existing<br>Terraform code), leave this false to avoid a duplicate-acceptance error. | `bool` | `false` | no |
+| admin\_password | Admin password. If null and no SSH key provided, a random password is generated and stored in Key Vault (requires enable\_disk\_encryption = true). | `string` | `null` | no |
+| admin\_ssh\_public\_key | SSH public key for authentication. Mutually exclusive with admin\_password. | `string` | `null` | no |
+| admin\_username | Admin username for VM-Series instances. | `string` | `"panadmin"` | no |
+| boot\_diagnostics\_storage\_uri | Storage account URI for boot diagnostics. If null with boot diagnostics enabled, uses managed storage. | `string` | `null` | no |
+| bootstrap\_share\_directory | Optional subdirectory within the file share for bootstrap packages. | `string` | `null` | no |
+| bootstrap\_share\_name | File share name for bootstrap. | `string` | `null` | no |
+| bootstrap\_storage\_account\_access\_key | Bootstrap storage account access key. | `string` | `null` | no |
+| bootstrap\_storage\_account\_name | Bootstrap storage account NAME (not ARM resource ID). PAN-OS expects the account name, not the full /subscriptions/.../storageAccounts/... path. If null, no bootstrap. | `string` | `null` | no |
+| bootstrap\_storage\_account\_sas\_token | Optional SAS token (time-limited) as an alternative to bootstrap\_storage\_account\_access\_key.<br><br>If both are set, the SAS token takes precedence (access-key= in custom\_data is set to the<br>SAS value). Trade-off: SAS tokens expire and must be rotated; master access keys persist<br>but are more sensitive. Choose based on operational tolerance. | `string` | `null` | no |
+| bootstrap\_storage\_account\_use\_msi | Use the VM's System-Assigned Managed Identity for bootstrap SA access instead of an access<br>key or SAS token.<br><br>Requires PAN-OS 10.2+ (native MSI-based blob storage access). When true, no credential<br>is embedded in custom\_data. The VM's MSI must be granted "Storage Blob Data Reader" on the<br>bootstrap container before first boot — wire this via ../RoleAssignment in the caller. | `bool` | `false` | no |
+| disk\_encryption\_key\_expiration\_days | Validity period (in days) applied as `expiration_date` on the disk-encryption<br>Key Vault key (CKV\_AZURE\_40). Default 730 days (2 years) is aligned with the<br>key's P2Y `rotation_policy`.<br><br>Why expiry is SAFE for this disk-encryption key (per Microsoft Learn):<br>  - The key carries a rotation\_policy that auto-rotates a fresh version 30 days<br>    before expiry, and the Disk Encryption Set has auto\_key\_rotation\_enabled =<br>    true. Azure updates all disks referencing the DES to the new key version<br>    within one hour, and re-wraps the DEK without re-encrypting disk data.<br>  - Existing disks keep decrypting: an expired *version* does not break the DES<br>    while a newer version exists. Data loss only occurs if the whole key is<br>    DELETED/DISABLED, or if it expires with NO auto-rotation configured — neither<br>    applies here.<br><br>The expiration anchor is frozen (via time\_offset) at the apply that first<br>introduces it, so the date is always `upgrade_time + N days` (future) and stable<br>across plans. | `number` | `730` | no |
+| enable\_boot\_diagnostics | Enable boot diagnostics for troubleshooting VM boot failures. | `bool` | `false` | no |
+| enable\_disk\_encryption | Creates a Key Vault, RSA key and Disk Encryption Set for CMK OS disk encryption. | `bool` | `true` | no |
+| encryption\_at\_host\_enabled | Enables Encryption at Host on the VMs. Encrypts temp disk + cache + pagefile<br>at the hypervisor level (complements disk\_encryption\_set\_id which covers<br>the managed disks with CMK).<br><br>Prerequisite: feature 'Microsoft.Compute/EncryptionAtHost' must be<br>registered on the subscription:<br>  az feature register --namespace Microsoft.Compute --name EncryptionAtHost<br>  az provider register --namespace Microsoft.Compute<br><br>Requires a compatible VM size (Dsv4+, Esv4+, etc. — not D\_v3 or similar). | `bool` | `true` | no |
+| ilb\_probe\_interval | Health probe interval in seconds. | `number` | `5` | no |
+| ilb\_probe\_port | ILB health probe port. | `number` | `443` | no |
+| ilb\_probe\_threshold | Number of consecutive probe failures before marking backend unhealthy. | `number` | `2` | no |
+| kv\_admin\_principal\_ids | List of Entra ID principal object IDs (users, groups, or service principals)<br>granted 'Key Vault Administrator' on the cluster KV.<br><br>Must include every identity that will run 'terragrunt apply' on this module:<br>  - The pipeline SPN (e.g. spn-azdo-alz-001 OID)<br>  - Any local admin deploying from their workstation<br><br>Avoids the ping-pong replacement triggered when the previous auto-<br>assignment used 'data.azurerm\_client\_config.current.object\_id'.<br><br>For prod, prefer a single Entra ID group OID (GRP\_AZ\_PIM\_*) containing<br>the authorized members — enables JIT activation and a clean audit trail. | `list(string)` | `[]` | no |
+| kv\_allowed\_ips | Public IPs (CIDR /32) added to the KV network\_acls allowlist. The KV is always publicly reachable (required for DES key unwrap via AzureServices bypass) with default\_action = Deny; this list grants additional explicit callers. | `list(string)` | `[]` | no |
+| kv\_secret\_expiration\_days | Validity period (in days) applied as `expiration_date` on the vwan BGP-peer<br>Key Vault secrets (CKV\_AZURE\_41). Default 365 days. Anchored via time\_offset<br>(frozen at first apply) so the date is stable across plans. | `number` | `365` | no |
+| kv\_secrets\_readers | List of Entra ID group object IDs granted Key Vault Secrets User on the cluster KV. | `list(string)` | `[]` | no |
+| lock | Optional management lock on the ILB (Internal Load Balancer) — the<br>critical Palo cluster ingress point. When set, blocks accidental delete<br>of the ILB without affecting individual VMs/NICs (which have their own<br>prevent\_destroy guard).<br><br>- kind: "CanNotDelete" or "ReadOnly".<br>- name: optional override (defaults to lock-ilb). | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| log\_analytics\_workspace\_id | Log Analytics Workspace ID for Application Insights. If null, no APPI is created. | `string` | `null` | no |
+| name | Optional override for the ILB name (Palo cluster identifier). When null,<br>computed via the ../Naming submodule as lbi-{subscription\_acronym}-<br>{environment}-{region\_code}-{workload}-trust.<br><br>Pass explicitly to preserve byte-for-byte Azure resource names on<br>upgrade — legacy names used the "ilb-..." prefix while the Naming<br>submodule produces "lbi-...". Example: set to<br>"ilb-con-prod-gwc-palo-obew-trust" to suppress the ILB rename. | `string` | `null` | no |
+| os\_disk\_size\_gb | OS disk size in GB. | `number` | `80` | no |
+| os\_disk\_storage\_account\_type | OS disk storage account type: Standard\_LRS, StandardSSD\_LRS, or Premium\_LRS. | `string` | `"Premium_LRS"` | no |
+| panos\_spn\_object\_id | PAN-OS SPN object ID (e.g. spn-prod-panos-001). Receives the custom AppInsights role on the subscription. | `string` | `null` | no |
+| panos\_version | PAN-OS version. Applied as the 'PanosVersion' tag on all cluster resources for lifecycle visibility. The actual running version is controlled by var.vm\_image. | `string` | `"11.1.607"` | no |
+| tags | Tags to assign | `map(string)` | `{}` | no |
+| vm\_image | Palo Alto VM-Series marketplace image reference. | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>    version   = string<br>  })</pre> | <pre>{<br>  "offer": "vmseries-flex",<br>  "publisher": "paloaltonetworks",<br>  "sku": "byol",<br>  "version": "latest"<br>}</pre> | no |
+| vm\_size | VM SKU for the Palo VM-Series cluster.<br><br>Minimum requirements: 4 vCPU, 14 GB RAM (Palo VM-300+).<br><br>Encryption at Host compatibility:<br>- Dsv2 family (Standard\_DS3\_v2 etc.) is NOT compatible with<br>  encryption\_at\_host\_enabled = true → VM create fails.<br>- Dsv3 / Dsv4 / Esv3+ families are compatible.<br><br>Default Standard\_DS4\_v3 (4 vCPU, 16 GB) satisfies both Palo VM-300<br>requirements and Encryption at Host. If you must use Dsv2, set<br>encryption\_at\_host\_enabled = false explicitly. | `string` | `"Standard_DS4_v3"` | no |
+| vwan\_bgp\_peer\_asn | Optional vwan virtual hub router BGP ASN (consumed from<br>module.vwan.virtual\_hub\_router\_asns[<hub\_key>]). Typically 65515.<br><br>Companion to var.vwan\_bgp\_peer\_ips. Stored as KV secret when<br>enable\_disk\_encryption = true. | `number` | `null` | no |
+| vwan\_bgp\_peer\_ips | Optional list of vwan virtual hub router BGP peer IPs (consumed from<br>module.vwan.virtual\_hub\_router\_ips[<hub\_key>]).<br><br>When set together with enable\_disk\_encryption = true, the IPs are stored<br>as a Key Vault secret for Panorama / bootstrap.xml pickup. Enables a<br>Terraform-managed dependency chain between vwan and Palo BGP config.<br><br>When null, BGP peer config is assumed to be managed externally<br>(Panorama, bootstrap.xml hardcoded values, etc.). | `list(string)` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| appinsights\_connection\_strings | Map of key => APPI connection string. |
+| appinsights\_instrumentation\_keys | Map of key => APPI instrumentation key (for PAN-OS config). |
+| des\_identity\_principal\_id | DES managed identity principal ID. |
+| disk\_encryption\_set\_id | Disk Encryption Set ID (null if no CMK). |
+| ilb\_backend\_pool\_id | Internal Load Balancer backend pool ID. |
+| ilb\_frontend\_ip | Internal Load Balancer frontend IP. |
+| ilb\_id | Internal Load Balancer ID. |
+| ilb\_lock\_ids | Map of ILB Resource Lock IDs (empty when no lock configured). |
+| key\_vault\_id | Key Vault ID for disk encryption (null if disabled). |
+| mgmt\_private\_ips | Map of key => management private IP. |
+| resource\_group\_name | Resource group name (caller-provided passthrough). |
+| resources | Map of primary resources for downstream composition and inspection. The vm and des entries are curated field lists (not the raw resource objects) to avoid surfacing provider deprecated attributes — vm\_agent\_platform\_updates\_enabled (read-only) on the VM and managed\_hsm\_key\_id on the DES (same pattern as FlowLogs #10939). |
+| trust\_private\_ips | Map of firewall key => trust NIC private IP address. Use for UDR next-hop or vwan BGP peer wiring. |
+| untrust\_private\_ips | Map of firewall key => untrust NIC private IP address. Use for external-facing UDR wiring. |
+| vm\_ids | Map of key => VM ID. |
+| vm\_names | Map of key => VM name. |
+<!-- END_TF_DOCS -->
