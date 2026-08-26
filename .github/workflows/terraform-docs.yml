@@ -26,9 +26,9 @@ on:
       - '.terraform-docs.yml'
   workflow_dispatch:
 
+# Least privilege: read-only at workflow level, writes granted per job.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: terraform-docs
@@ -38,6 +38,9 @@ jobs:
   docs:
     name: Refresh module READMEs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the docs/terraform-docs branch
+      pull-requests: write   # open the docs PR
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

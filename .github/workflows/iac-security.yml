@@ -54,9 +54,10 @@ on:
     - cron: '0 5 * * 1'  # Mondays 05:00 UTC — weekly full IaC baseline scan
   workflow_dispatch:
 
+# Least privilege: read-only at workflow level; the scan job elevates
+# security-events for the SARIF upload.
 permissions:
   contents: read
-  security-events: write   # SARIF upload to Code Scanning
 
 env:
   TRIVY_VERSION: '0.72.0'
@@ -69,6 +70,9 @@ jobs:
     name: Checkov + Trivy — IaC posture (modules/)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write   # SARIF upload to Code Scanning
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

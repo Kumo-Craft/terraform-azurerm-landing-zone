@@ -25,14 +25,17 @@ on:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC — pairs with the CI weekly sweep
   workflow_dispatch:
 
+# Least privilege: read-only at workflow level, writes granted per job.
 permissions:
   contents: read
-  issues: write   # gh-upsert-issue.sh files major-bump issues
 
 jobs:
   freshness:
     name: Provider freshness report (advisory)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write   # gh-upsert-issue.sh files major-bump issues
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

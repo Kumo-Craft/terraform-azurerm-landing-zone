@@ -25,10 +25,9 @@ on:
         required: true
         type: string
 
+# Least privilege: read-only at workflow level, writes granted per job.
 permissions:
-  contents: write      # upload assets / create the GitHub Release
-  id-token: write      # Sigstore signing for the provenance attestation
-  attestations: write  # store the attestation on the repo
+  contents: read
 
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
@@ -37,6 +36,10 @@ jobs:
   release:
     name: Build docs bundle + attach to release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # upload assets / create the GitHub Release
+      id-token: write      # Sigstore signing for the provenance attestation
+      attestations: write  # store the attestation on the repo
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
