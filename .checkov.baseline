@@ -1,0 +1,292 @@
+{
+    "failed_checks": [
+        {
+            "file": "/AlzArchitecture/main.tf",
+            "findings": [
+                {
+                    "resource": "alz_architecture",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/AlzManagement/main.tf",
+            "findings": [
+                {
+                    "resource": "alz_management",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/FinOpsHub/adf.tf",
+            "findings": [
+                {
+                    "resource": "azurerm_data_factory.this",
+                    "check_ids": [
+                        "CKV2_AZURE_15"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/FinOpsHub/adx.tf",
+            "findings": [
+                {
+                    "resource": "azurerm_kusto_cluster.this[0]",
+                    "check_ids": [
+                        "CKV2_AZURE_11"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/FinOpsHub/main.tf",
+            "findings": [
+                {
+                    "resource": "azurerm_storage_account.this",
+                    "check_ids": [
+                        "CKV2_AZURE_1",
+                        "CKV2_AZURE_33",
+                        "CKV2_AZURE_38"
+                    ]
+                },
+                {
+                    "resource": "azurerm_storage_container.this[\"config\"]",
+                    "check_ids": [
+                        "CKV2_AZURE_21"
+                    ]
+                },
+                {
+                    "resource": "azurerm_storage_container.this[\"ingestion\"]",
+                    "check_ids": [
+                        "CKV2_AZURE_21"
+                    ]
+                },
+                {
+                    "resource": "azurerm_storage_container.this[\"msexports\"]",
+                    "check_ids": [
+                        "CKV2_AZURE_21"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/KeyVault/main.tf",
+            "findings": [
+                {
+                    "resource": "module.kv.azurerm_key_vault.this",
+                    "check_ids": [
+                        "CKV2_AZURE_32"
+                    ]
+                },
+                {
+                    "resource": "module.kv[0].azurerm_key_vault.this",
+                    "check_ids": [
+                        "CKV2_AZURE_32"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/Naming/main.tf",
+            "findings": [
+                {
+                    "resource": "module.aks.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.application_group[\"desktop\"].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.backup_identity.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.host_pool.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.id_cp.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.id_kubelet.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.kv.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.kv[0].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.law.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.naming_component[\"ama\"].this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.naming_component[\"changetracking\"].this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.naming_component[\"defendersql\"].this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.naming_component[\"vminsights\"].this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.network_watcher[0].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.nsg.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.route_table[0].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.scaling_plan[0].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.session_host[0].module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.storage.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.subnet_route_table.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                },
+                {
+                    "resource": "module.workspace.module.naming.this",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/PrivateDnsZones/main.tf",
+            "findings": [
+                {
+                    "resource": "private_dns_zones",
+                    "check_ids": [
+                        "CKV_TF_1"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/SecurityCenterPricing/main.tf",
+            "findings": [
+                {
+                    "resource": "azurerm_security_center_subscription_pricing.this",
+                    "check_ids": [
+                        "CKV_AZURE_19"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/SqlDatabase/main.tf",
+            "findings": [
+                {
+                    "resource": "azurerm_mssql_firewall_rule.allow_azure_services",
+                    "check_ids": [
+                        "CKV2_AZURE_34"
+                    ]
+                },
+                {
+                    "resource": "azurerm_mssql_server.this",
+                    "check_ids": [
+                        "CKV2_AZURE_2"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/StorageAccount/main.tf",
+            "findings": [
+                {
+                    "resource": "module.storage.azurerm_storage_account.this",
+                    "check_ids": [
+                        "CKV2_AZURE_33",
+                        "CKV_AZURE_35",
+                        "CKV_AZURE_36"
+                    ]
+                },
+                {
+                    "resource": "module.storage.azurerm_storage_container.this",
+                    "check_ids": [
+                        "CKV2_AZURE_21",
+                        "CKV_AZURE_34"
+                    ]
+                }
+            ]
+        }
+    ]
+}

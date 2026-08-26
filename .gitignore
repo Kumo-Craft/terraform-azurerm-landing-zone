@@ -1,0 +1,12 @@
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Local-only MCP server config (contains machine-specific absolute paths).
+.mcp.json
+
+# Claude Code config — not part of the published repo.
+.claude/
+CLAUDE.md

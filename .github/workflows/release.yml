@@ -1,0 +1,93 @@
+# Release — GitHub Actions workflow (migrated back from
+# pipelines/release.yml, the Azure DevOps port).
+#
+# Triggers on every single-global-version SemVer tag (v0.1.0, v0.2.1, …).
+# Builds:
+#   - terraform-docs Markdown per submodule, bundled in
+#     terraform-docs-<tag>.tar.gz.
+#   - Auto-generated release notes (git log since the previous tag).
+# Both land in a real GitHub Release (something Azure DevOps had no
+# equivalent for — the old pipeline had to fake it with build artifacts).
+#
+# If the repo is wired to an HCP Terraform private registry, pushing the
+# tag still auto-imports it as a new module version (independent of this
+# workflow).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # create the GitHub Release
+
+jobs:
+  release:
+    name: Build docs bundle + GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history — needed for "git log since previous tag"
+
+      - name: Install terraform-docs
+        run: |
+          set -euo pipefail
+          curl -fsSLo /tmp/terraform-docs.tar.gz \
+            https://terraform-docs.io/dl/v0.18.0/terraform-docs-v0.18.0-linux-amd64.tar.gz
+          tar -xzf /tmp/terraform-docs.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/terraform-docs /usr/local/bin/terraform-docs
+          terraform-docs --version
+
+      - name: Generate terraform-docs per submodule
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          OUT="terraform-docs-$TAG"
+          mkdir -p "$OUT"
+          for dir in modules/*/; do
+            mod=$(basename "$dir")
+            terraform-docs markdown table --output-file "/dev/stdout" "$dir" > "$OUT/$mod.md" 2>/dev/null || {
+              echo "[skip] $mod (terraform-docs failed — likely missing inputs/outputs)"
+              rm -f "$OUT/$mod.md"
+            }
+            [ -s "$OUT/$mod.md" ] && echo "[ok]   $mod -> $OUT/$mod.md ($(wc -l < "$OUT/$mod.md") lines)" || true
+          done
+          # Also generate for the root meta-module.
+          terraform-docs markdown table --output-file "/dev/stdout" . > "$OUT/_root.md" 2>/dev/null || true
+
+          tar -czf "$RUNNER_TEMP/$OUT.tar.gz" "$OUT"
+          ls -la "$RUNNER_TEMP/$OUT.tar.gz"
+
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
+          if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
+          NOTES="$RUNNER_TEMP/release-notes-$TAG.md"
+          {
+            echo "# Release $TAG"
+            echo ""
+            echo "## Changes since ${PREV:-the beginning}"
+            echo ""
+            git log --no-merges --pretty=format:'- %s (%h)' "$RANGE"
+            echo ""
+          } > "$NOTES"
+          cat "$NOTES"
+          # Also attach the notes to the run summary.
+          cat "$NOTES" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/release-notes-$TAG.md" \
+            "$RUNNER_TEMP/terraform-docs-$TAG.tar.gz"

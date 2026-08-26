@@ -1,0 +1,54 @@
+[
+  {
+    "name": "CopyExportToIngestion",
+    "type": "Copy",
+    "dependsOn": [],
+    "policy": {
+      "timeout": "0.01:00:00",
+      "retry": 3,
+      "retryIntervalInSeconds": 30
+    },
+    "inputs": [
+      {
+        "referenceName": "ds_msexports",
+        "type": "DatasetReference"
+      }
+    ],
+    "outputs": [
+      {
+        "referenceName": "ds_ingestion",
+        "type": "DatasetReference",
+        "parameters": {
+          "folderPath": {
+            "value": "@concat(pipeline().parameters.datasetType, '/', pipeline().parameters.datasetVersion, '/', formatDateTime(utcnow(), 'yyyy/MM'))",
+            "type": "Expression"
+          }
+        }
+      }
+    ],
+    "typeProperties": {
+      "source": {
+        "type": "ParquetSource",
+        "storeSettings": {
+          "type": "AzureBlobFSReadSettings",
+          "recursive": true,
+          "wildcardFolderPath": {
+            "value": "@substring(pipeline().parameters.folderPath, add(indexOf(pipeline().parameters.folderPath, '/'), 1), sub(length(pipeline().parameters.folderPath), add(indexOf(pipeline().parameters.folderPath, '/'), 1)))",
+            "type": "Expression"
+          },
+          "wildcardFileName": "*.parquet"
+        }
+      },
+      "sink": {
+        "type": "ParquetSink",
+        "storeSettings": {
+          "type": "AzureBlobFSWriteSettings"
+        },
+        "formatSettings": {
+          "type": "ParquetWriteSettings"
+        }
+      },
+      "enableStaging": false
+    }
+  }
+]

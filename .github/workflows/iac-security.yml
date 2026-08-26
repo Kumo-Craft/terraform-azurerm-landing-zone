@@ -1,0 +1,230 @@
+# IaC Security Scan — GitHub Actions workflow (migrated back from
+# pipelines/iac-security.yml, the Azure DevOps port).
+#
+# Pre-deployment IaC posture scanning for the Terraform modules in THIS repo.
+# Free, open-source scanners run DIRECTLY (no wrapper action needed).
+#
+# WHY HERE: the .tf source lives in this repo; the downstream Terragrunt repos
+# only reference it by git source. Scanning the modules at their source catches
+# misconfigurations ONCE, before any consumer ever deploys them.
+#
+# WHAT IT RUNS (all SOFT-FAIL — advisory, never blocks)
+#   1. Checkov — the de-facto Terraform posture scanner. SARIF → artifact.
+#   2. Trivy config — IaC misconfiguration scanner (absorbed tfsec). SARIF → artifact.
+#   3. TFLint — idiomatic Terraform lint (deprecated syntax, invalid Azure
+#      SKUs/types, unused vars). Output → step log + raw artifact.
+#      Config: /.tflint.hcl (committed).
+#
+# ── ADVISORY + REGRESSION GATE ────────────────────────────────────────
+# The scanners run ADVISORY (Checkov `--soft-fail`, Trivy `--exit-code 0`,
+# TFLint `exit 0`, all `continue-on-error`) → findings surface in the logs +
+# artifacts without failing the run.
+# ON TOP of that, a final "Checkov regression gate" step re-runs Checkov WITH
+# --baseline (/.checkov.baseline) and does NOT soft-fail: it turns the run RED
+# ONLY when a NEW finding (not in the accepted baseline) is introduced — a real
+# regression. To accept new findings on purpose, regenerate the snapshot:
+#   checkov -d modules/ --config-file .checkov.yaml --create-baseline
+# and commit the updated .checkov.baseline.
+#
+# CAVEAT: Checkov's nested-module attribution can shift the file a finding is
+# reported under between runs; since the baseline is file-keyed, that can
+# occasionally surface a shifted finding as "new" (a false regression). Keep
+# this check NON-required in branch protection until it proves stable; then
+# make it required.
+#
+# ── CODE SCANNING ─────────────────────────────────────────────────────
+# The repo is PUBLIC, so GitHub Code Scanning is free: both SARIFs are
+# uploaded (steps below) and findings surface as inline PR annotations and
+# in the Security tab, in addition to the run log + SARIF artifacts.
+
+name: IaC Security
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'modules/**/*.tf'
+      - 'modules/**/*.tftest.hcl'
+      - '*.tf'
+      - '.tflint.hcl'
+      - 'tflint.tfvars'
+      - '.checkov.yaml'
+      - '.checkov.baseline'
+  schedule:
+    - cron: '0 5 * * 1'  # Mondays 05:00 UTC — weekly full IaC baseline scan
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # SARIF upload to Code Scanning
+
+env:
+  TRIVY_VERSION: '0.72.0'
+
+jobs:
+  # ── 1. Checkov + Trivy (security posture) ─────────────────────────
+  # One job (sequential) so both SARIFs land in a single artifact. Each
+  # scanner is independently soft-failed, so one never aborts the other.
+  iac-scan:
+    name: Checkov + Trivy — IaC posture (modules/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Checkov -----------------------------------------------------
+      - name: Install Checkov
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install --quiet 'checkov>=3.3,<4'
+          checkov --version
+
+      - name: Run Checkov (soft-fail)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          SARIF="$RUNNER_TEMP/sarif"
+          mkdir -p "$SARIF"
+
+          echo "══════════════════════════════════════════════════"
+          echo "  Checkov — scanning modules/"
+          echo "══════════════════════════════════════════════════"
+
+          # --soft-fail → checkov exits 0 regardless of findings.
+          # --config-file loads the documented baseline (.checkov.yaml):
+          # skip-path for the external naming wrapper + skip-check for the
+          # by-design/parameterized false-positives. Genuine gaps stay listed.
+          checkov \
+            --directory modules/ \
+            --config-file "$GITHUB_WORKSPACE/.checkov.yaml" \
+            --framework terraform \
+            --soft-fail \
+            --compact \
+            --output cli \
+            --output sarif \
+            --output-file-path "console,$SARIF/checkov.sarif"
+          exit 0
+
+      # --- Trivy -------------------------------------------------------
+      - name: Install Trivy
+        run: |
+          set -euo pipefail
+          BIN="$RUNNER_TEMP/bin"; mkdir -p "$BIN"
+          curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "$BIN" "v${TRIVY_VERSION}"
+          "$BIN/trivy" --version
+
+      - name: Run Trivy config (soft-fail)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          SARIF="$RUNNER_TEMP/sarif"; mkdir -p "$SARIF"
+          TRIVY="$RUNNER_TEMP/bin/trivy"
+
+          echo "══════════════════════════════════════════════════"
+          echo "  Trivy config — scanning modules/"
+          echo "══════════════════════════════════════════════════"
+
+          # --exit-code 0 → soft-fail (never fails the step on findings).
+          "$TRIVY" config modules/ --format sarif --output "$SARIF/trivy.sarif" --exit-code 0
+          # Human-readable table to the log.
+          "$TRIVY" config modules/ --format table --exit-code 0 || true
+          exit 0
+
+      # --- Publish -----------------------------------------------------
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iac-sarif-${{ github.run_id }}
+          path: ${{ runner.temp }}/sarif
+
+      - name: Upload Checkov SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/sarif/checkov.sarif
+          category: checkov
+
+      - name: Upload Trivy SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/sarif/trivy.sarif
+          category: trivy
+
+      # --- Regression gate: RED only on a NEW finding -------------------
+      # Re-runs Checkov WITH --baseline (/.checkov.baseline = the accepted
+      # snapshot of today's findings). Checkov reports + exits non-zero ONLY
+      # for findings NOT in the baseline — i.e. a genuinely NEW
+      # misconfiguration introduced by a change. Accepted findings are
+      # suppressed, so a clean PR stays GREEN; a real regression makes THIS
+      # step (and the run) RED. Unlike the advisory Checkov step above, this
+      # one has NO continue-on-error / soft-fail. It runs LAST so the
+      # advisory scan + Trivy + all publishes complete first.
+      - name: Checkov regression gate (red on NEW finding)
+        run: |
+          set -uo pipefail
+          echo "Regression gate — Checkov vs accepted baseline (.checkov.baseline)"
+          RC=0
+          checkov \
+            --directory modules/ \
+            --config-file "$GITHUB_WORKSPACE/.checkov.yaml" \
+            --baseline "$GITHUB_WORKSPACE/.checkov.baseline" \
+            --framework terraform \
+            --compact || RC=$?
+          if [ "$RC" -eq 0 ]; then
+            echo "No NEW findings vs baseline — GREEN."
+          else
+            echo "::error::Checkov found NEW finding(s) not in .checkov.baseline (regression). Fix the change, or (if intentional) regenerate .checkov.baseline."
+          fi
+          exit $RC
+
+  # ── 2. TFLint (idiomatic Terraform lint) ──────────────────────────
+  tflint:
+    name: TFLint (modules/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TFLint
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          tflint --version
+
+      - name: Run TFLint (soft-fail)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          CFG="$GITHUB_WORKSPACE/.tflint.hcl"
+          # Absolute path so it resolves from every module dir under --recursive.
+          # Provides convention values so TFLint can evaluate name-building
+          # coalesce()/interpolation instead of aborting on null inputs.
+          VARS="$GITHUB_WORKSPACE/tflint.tfvars"
+          OUT="$RUNNER_TEMP/tflint"
+          mkdir -p "$OUT"
+
+          tflint --init --config "$CFG"
+
+          echo "══════════════════════════════════════════════════"
+          echo "  TFLint — scanning modules/ (recursive)"
+          echo "══════════════════════════════════════════════════"
+
+          cd modules/
+          set +e
+          # Human-readable lint output to the log, plus a report saved to the
+          # raw artifact. Lint findings are advisory — consult the log /
+          # artifact for details.
+          tflint --recursive --config "$CFG" --var-file "$VARS" --format compact | tee "$OUT/tflint-report.txt"
+          echo "TFLint exit (human run): ${PIPESTATUS[0]} — soft-fail, always treated as success"
+          exit 0
+
+      - name: Upload TFLint raw output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tflint-${{ github.run_id }}
+          path: ${{ runner.temp }}/tflint

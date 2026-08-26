@@ -1,0 +1,104 @@
+# AVD Image Build — scheduled Azure Image Builder (AIB) rebuild.
+#
+# ⚠ TEMPLATE — this file lives OUTSIDE .github/workflows/ on purpose: it
+# targets a DEPLOYED image template in a specific subscription, so it is
+# environment-specific. Copy it into the downstream LZ/platform repo's
+# .github/workflows/ and wire the secrets/variables below.
+#
+# Kicks off a build of an existing Microsoft.VirtualMachineImages/
+# imageTemplates resource (defined by the AvdImageTemplate module) so the
+# golden image is rebuilt from its `latest` marketplace base + customizer
+# scripts on a cadence, publishing a fresh version into the Compute Gallery
+# that AvdSessionHost consumes via source_image_id.
+#
+# Why a workflow (not terraform): an AIB build is a long-running, repeatable
+# job. Creating the template only DEFINES it; this workflow RUNS it. Keeping
+# the run out of `terraform apply` avoids blocking infra applies on a 30-120+
+# min image build.
+#
+# ── One-time setup (in the downstream repo) ──────────────────────────
+# 1. Entra app registration + federated credential for that repo's default
+#    branch (OIDC — no client secret), with rights to run the template:
+#    Contributor on the image resource group is sufficient (it must POST the
+#    Run action and, if no staging RG is pinned, allow AIB to create the
+#    staging RG).
+# 2. Repo secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.
+# 3. Repo variables:
+#      IMAGE_RESOURCE_GROUP = <rg holding the image template>
+#      IMAGE_TEMPLATE_NAME  = <template name>
+#
+# NOTE ON TIMEOUT: GitHub-hosted runners allow up to 6 h per job, so the
+# 240-min timeout below fits even long AIB Win11 M365 builds. For a
+# fire-and-forget run (workflow returns immediately; a later run reports
+# the result), dispatch with waitForBuild = false.
+
+name: AVD Image Build
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Sundays 03:00 UTC — fresh image before the work week
+  workflow_dispatch:
+    inputs:
+      waitForBuild:
+        description: 'Wait for the build to finish (false = fire-and-forget)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write   # OIDC federated login
+
+jobs:
+  build:
+    name: Run AVD image template
+    runs-on: ubuntu-latest
+    timeout-minutes: 240   # allow long AIB builds
+    steps:
+      - name: Azure login (OIDC, Contributor on the image RG)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Trigger Azure Image Builder run
+        env:
+          RG: ${{ vars.IMAGE_RESOURCE_GROUP }}
+          TPL: ${{ vars.IMAGE_TEMPLATE_NAME }}
+          # Scheduled runs have no inputs — default to a waiting build.
+          WAIT: ${{ github.event_name == 'schedule' && 'true' || inputs.waitForBuild }}
+        run: |
+          set -uo pipefail
+
+          if [[ -z "$RG" || -z "$TPL" ]]; then
+            echo "::error::Set repo variables IMAGE_RESOURCE_GROUP and IMAGE_TEMPLATE_NAME (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+          echo "Azure Image Builder — template '$TPL' (rg '$RG'), wait=$WAIT"
+
+          if [ "$WAIT" = "false" ]; then
+            # Fire-and-forget: start the build and return immediately.
+            az image builder run -n "$TPL" -g "$RG" --no-wait --only-show-errors
+            outcome="started"
+          else
+            echo "Building… this can take 30-120+ minutes."
+            if az image builder run -n "$TPL" -g "$RG" --only-show-errors; then
+              outcome="succeeded"
+            else
+              outcome="failed"
+            fi
+          fi
+
+          # Best-effort last-run status for reporting.
+          status_json=$(az image builder show -n "$TPL" -g "$RG" --only-show-errors -o json 2>/dev/null || echo '{}')
+          run_state=$(echo "$status_json" | jq -r '.lastRunStatus.runState // "Unknown"')
+          run_sub=$(echo "$status_json"   | jq -r '.lastRunStatus.runSubState // ""')
+          run_msg=$(echo "$status_json"   | jq -r '.lastRunStatus.message // ""')
+
+          echo "Outcome: $outcome (runState=$run_state, subState=$run_sub)"
+          [ -n "$run_msg" ] && echo "Message: $run_msg"
+
+          # Fail the job only when a synchronous run failed.
+          [ "$outcome" = "failed" ] && exit 1
+          exit 0

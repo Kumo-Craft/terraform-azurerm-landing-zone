@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":separateMajorReleases"
+  ],
+
+  "description": "terraform-azurerm-landing-zone — Terraform provider + registry-module bumps. Runs via the Renovate GitHub App (repo migrated to GitHub — see .github/workflows/README.md). Floor policy: '~>' provider ranges stay permissive; a Renovate PR is a SIGNAL to review, merge only when a module actually needs the newer provider.",
+
+  "timezone": "Europe/Luxembourg",
+
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "automerge": false,
+
+  "labels": ["renovate", "dependencies"],
+  "reviewers": ["John6810"],
+
+  "ignorePaths": ["**/.terraform/**"],
+
+  "terraform": {
+    "enabled": true
+  },
+
+  "packageRules": [
+    {
+      "description": "Group minor+patch provider updates across every module — single PR.",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_provider"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Terraform providers (non-major)",
+      "groupSlug": "terraform-providers-nonmajor"
+    },
+    {
+      "description": "Major provider bumps isolated — review breaking changes individually.",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_provider"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["renovate", "dependencies", "major-bump"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "AVM / registry module bumps — 1 PR per module to keep diffs small.",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["module"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "AVM / registry module MAJOR bumps isolated with cool-down period.",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["module"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["renovate", "dependencies", "major-bump"],
+      "minimumReleaseAge": "7 days"
+    }
+  ],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "minimumReleaseAge": "0 days"
+  }
+}

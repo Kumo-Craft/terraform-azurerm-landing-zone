@@ -1,0 +1,160 @@
+# CI Modules — GitHub Actions workflow (migrated back from
+# pipelines/ci-modules.yml, the Azure DevOps port).
+#
+# Detects which submodules changed in a PR and runs
+# fmt / init / validate / test on each in parallel via a dynamic matrix.
+# A weekly schedule re-validates EVERY module (root + all submodules) to
+# catch drift from upstream azurerm provider releases.
+#
+# PR validation is native here — the `pull_request` trigger below replaces
+# the Azure Repos "Build Validation branch policy". To make it BLOCKING,
+# add the `Validate submodule` / `Validate root meta-module` checks as
+# required status checks on the `main` branch protection rule
+# (Settings → Branches). See .github/workflows/README.md.
+
+name: CI Modules
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'modules/**/*.tf'
+      - 'modules/**/*.tftest.hcl'
+      - '*.tf'
+      - 'examples/**/*.tf'
+  schedule:
+    - cron: '0 6 * * 1'  # Mondays 06:00 UTC — weekly full-validate sweep
+  workflow_dispatch:      # manual full sweep
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-modules-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TERRAFORM_VERSION: '1.12.2'
+
+jobs:
+  # ── Detect which submodules / root changed ──────────────────────────
+  detect:
+    name: Detect modified modules
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.setmatrix.outputs.modules }}
+      has_modules: ${{ steps.setmatrix.outputs.has_modules }}
+      root_changed: ${{ steps.setmatrix.outputs.root_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history — needed for the merge-base diff
+
+      - name: Detect changes
+        id: setmatrix
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Diff between PR HEAD and the merge base of the target branch.
+            TARGET="${{ github.base_ref }}"
+            git fetch --no-tags origin "$TARGET" >/dev/null 2>&1 || true
+            DIFF=$(git diff --name-only "origin/${TARGET}...HEAD")
+          else
+            # Schedule / manual run: treat everything as changed so the same
+            # jobs perform the full weekly validate sweep.
+            DIFF=$(git ls-files 'modules/*' '*.tf')
+          fi
+
+          # 1) Submodules under modules/ that changed.
+          #    Path shape: modules/<Name>/...  → field 2 is <Name>.
+          #    Trailing `|| true`: a docs-only / non-module PR makes the
+          #    grep match nothing (exit 1), which under `pipefail`+`set -e`
+          #    would abort the whole step. Swallow it so MODULES is just "".
+          MODULES=$(echo "$DIFF" \
+            | grep -E '^modules/[^/]+/' \
+            | cut -d'/' -f2 \
+            | sort -u \
+            | while read -r mod; do [ -f "modules/$mod/main.tf" ] && echo "$mod"; done) || true
+
+          # JSON array for the dynamic matrix: ["KeyVault","Vnet"]
+          MATRIX=$(echo "$MODULES" | jq -R -s -c 'split("\n") | map(select(length>0))')
+          COUNT=$(echo "$MODULES" | grep -c . || true)
+          HAS=$([ "${COUNT:-0}" -gt 0 ] && echo true || echo false)
+
+          # 2) Root meta-module — *.tf at repo root.
+          ROOTCOUNT=$(echo "$DIFF" | grep -cE '^[^/]+\.tf$' || true)
+          ROOT=$([ "${ROOTCOUNT:-0}" -gt 0 ] && echo true || echo false)
+
+          {
+            echo "modules=$MATRIX"
+            echo "has_modules=$HAS"
+            echo "root_changed=$ROOT"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Modified modules ($COUNT): $MATRIX"
+          echo "Root meta-module changed: $ROOT"
+
+  # ── Validate each changed submodule in parallel ─────────────────────
+  validate-modules:
+    name: Validate submodule
+    needs: detect
+    if: needs.detect.outputs.has_modules == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        module: ${{ fromJSON(needs.detect.outputs.modules) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive "modules/${{ matrix.module }}"
+
+      - name: Terraform Init
+        working-directory: modules/${{ matrix.module }}
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: modules/${{ matrix.module }}
+        run: terraform validate
+
+      - name: Terraform Test
+        working-directory: modules/${{ matrix.module }}
+        run: |
+          # Runs any *.tftest.hcl under tests/. Silent skip if the module
+          # has no tests yet — see CONTRIBUTING.md "Testing".
+          if compgen -G "tests/*.tftest.hcl" > /dev/null; then
+            terraform test
+          else
+            echo "No tests/*.tftest.hcl in modules/${{ matrix.module }} — skipping."
+          fi
+
+  # ── Validate the root meta-module ───────────────────────────────────
+  validate-root:
+    name: Validate root meta-module
+    needs: detect
+    if: needs.detect.outputs.root_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check (root)
+        run: terraform fmt -check ./*.tf
+
+      - name: Terraform Init (root)
+        run: terraform init -backend=false
+
+      - name: Terraform Validate (root)
+        run: terraform validate

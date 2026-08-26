@@ -1,0 +1,70 @@
+# Provider Freshness — scheduled dependency watcher (advisory).
+#
+# Replaces the freshness job of the retired Azure DevOps pipeline
+# pipelines/renovate.yml. Renovate ITSELF no longer runs in CI: install the
+# free Renovate GitHub App on this repo (github.com/apps/renovate) — the
+# committed /renovate.json applies as-is (PR-only, never auto-merge; a
+# Renovate PR is a SIGNAL, merge only when a module actually needs the
+# newer provider).
+#
+# WHY THIS JOB STILL EXISTS: for '~>' ranged providers Renovate stays
+# silent on in-range releases (no lock files are committed in this repo),
+# so this report is what tells you e.g. that a new azapi minor shipped
+# (and may embed a newer subnet API version — see
+# modules/NetworkStack/README.md @2025-05-01 note).
+#
+# Auto-files a GitHub Issue ONLY for a new MAJOR: '~>' blocks it and
+# Renovate won't PR it, so it's genuinely actionable. In-range minors are
+# left to Renovate's PRs. Deduplicated by title+label via
+# scripts/gh-upsert-issue.sh.
+
+name: Provider Freshness
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Mondays 06:00 UTC — pairs with the CI weekly sweep
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write   # gh-upsert-issue.sh files major-bump issues
+
+jobs:
+  freshness:
+    name: Provider freshness report (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report latest provider versions
+        env:
+          GH_TOKEN: ${{ github.token }}   # required by gh-upsert-issue.sh
+        run: |
+          set -uo pipefail
+          echo "Latest registry versions vs pinned '~>' ranges:"
+          echo ""
+          for p in hashicorp/azurerm Azure/azapi hashicorp/time; do
+            latest=$(curl -fsSL "https://registry.terraform.io/v1/providers/${p}" | jq -r .version)
+            pins=$(grep -rh -A1 "source\s*=\s*\"${p}\"" --include="version.tf" modules/ *.tf 2>/dev/null \
+                     | grep -oE '"[~>=! 0-9.]+"' | sort -u | tr '\n' ' ' || true)
+            echo "  ${p}: latest=${latest}  pinned ranges: ${pins:-n/a}"
+            echo "::warning::${p} latest is ${latest} — check whether any module needs it (pinned: ${pins:-n/a})"
+
+            # Auto-file ONLY a new MAJOR (see header). Deduplicated by title+label.
+            latest_major=${latest%%.*}
+            pin_major=$(echo "$pins" | grep -oE '~> *[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+            if [ -n "$pin_major" ] && [ "${latest_major:-0}" -gt "$pin_major" ]; then
+              bash scripts/gh-upsert-issue.sh \
+                "[Renovate] ${p} v${latest_major}.x available — pinned ~> ${pin_major}.x" \
+                "dependency" \
+                "Auto-filed by the **Provider Freshness** workflow.
+
+          Provider \`${p}\` has a new MAJOR \`${latest}\` outside the pinned \`~> ${pin_major}.x\` range. Renovate will not open a PR for a major jump — evaluate the upgrade (breaking changes) and bump the constraint deliberately if wanted." \
+                || echo "::warning::upsert skipped for ${p} major bump"
+            fi
+          done
+          echo ""
+          echo "NOTE: in-range minors (e.g. a new azapi 2.x) do NOT trigger a"
+          echo "Renovate PR because '~>' already allows them and no lock file is"
+          echo "committed. Treat the warnings above as the upgrade signal — in"
+          echo "particular a new azapi minor may unlock newer subnet API versions."

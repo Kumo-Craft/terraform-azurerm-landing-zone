@@ -1,0 +1,40 @@
+# Drift Lint — GitHub Actions workflow (migrated back from
+# pipelines/drift-lint.yml, the Azure DevOps port).
+#
+# Compares duplicated resource blocks in orchestrator modules
+# (KeyVaultStack, NetworkStack, PaloCluster) against their canonical
+# counterparts (KeyVault, ResourceGroup, PrivateEndpoint) and warns if
+# the inline copies have drifted. Realises the "accept duplication +
+# lint" strategy from REVIEW/SPRINT-7-AUDIT.md (Sprint 7 #1).
+#
+# Advisory by default — scripts/check-drift.sh returns 0 unless run with
+# --strict. Switch to --strict once the canonical alignment is fully
+# reconciled (see the audit doc).
+
+name: Drift Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'modules/KeyVault/main.tf'
+      - 'modules/KeyVaultStack/main.tf'
+      - 'modules/ResourceGroup/main.tf'
+      - 'modules/NetworkStack/main.tf'
+      - 'modules/PrivateEndpoint/main.tf'
+      - 'modules/PaloCluster/diskencryption.tf'
+      - 'scripts/check-drift.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Run drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run drift check
+        run: bash scripts/check-drift.sh
