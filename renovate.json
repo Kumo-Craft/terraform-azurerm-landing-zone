@@ -3,7 +3,8 @@
   "extends": [
     "config:recommended",
     ":semanticCommits",
-    ":separateMajorReleases"
+    ":separateMajorReleases",
+    "helpers:pinGitHubActionDigests"
   ],
 
   "description": "terraform-azurerm-landing-zone — Terraform provider + registry-module bumps. Runs via the Renovate GitHub App (repo migrated to GitHub — see .github/workflows/README.md). Floor policy: '~>' provider ranges stay permissive; a Renovate PR is a SIGNAL to review, merge only when a module actually needs the newer provider.",
@@ -53,6 +54,11 @@
       "matchUpdateTypes": ["major"],
       "labels": ["renovate", "dependencies", "major-bump"],
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "GitHub Actions: 3-day cool-down — a freshly compromised action release is usually yanked within days; the delay keeps it out of CI.",
+      "matchManagers": ["github-actions"],
+      "minimumReleaseAge": "3 days"
     }
   ],
 

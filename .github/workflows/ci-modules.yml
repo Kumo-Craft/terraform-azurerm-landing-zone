@@ -45,18 +45,22 @@ jobs:
       has_modules: ${{ steps.setmatrix.outputs.has_modules }}
       root_changed: ${{ steps.setmatrix.outputs.root_changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0   # full history — needed for the merge-base diff
 
       - name: Detect changes
         id: setmatrix
+        # ${{ }} values are passed via env (never interpolated into the
+        # script body) so the shell can't parse attacker-influenced content.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET: ${{ github.base_ref }}
         run: |
           set -euo pipefail
 
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ]; then
             # Diff between PR HEAD and the merge base of the target branch.
-            TARGET="${{ github.base_ref }}"
             git fetch --no-tags origin "$TARGET" >/dev/null 2>&1 || true
             DIFF=$(git diff --name-only "origin/${TARGET}...HEAD")
           else
@@ -71,9 +75,12 @@ jobs:
           #    Trailing `|| true`: a docs-only / non-module PR makes the
           #    grep match nothing (exit 1), which under `pipefail`+`set -e`
           #    would abort the whole step. Swallow it so MODULES is just "".
+          #    The [A-Za-z0-9._-] filter drops any directory name carrying
+          #    shell metacharacters — defense in depth for the matrix values.
           MODULES=$(echo "$DIFF" \
             | grep -E '^modules/[^/]+/.*\.(tf|hcl)$' \
             | cut -d'/' -f2 \
+            | grep -E '^[A-Za-z0-9._-]+$' \
             | sort -u \
             | while read -r mod; do [ -f "modules/$mod/main.tf" ] && echo "$mod"; done) || true
 
@@ -107,15 +114,17 @@ jobs:
       matrix:
         module: ${{ fromJSON(needs.detect.outputs.modules) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
 
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive "modules/${{ matrix.module }}"
+        env:
+          MODULE: ${{ matrix.module }}
+        run: terraform fmt -check -recursive "modules/$MODULE"
 
       - name: Terraform Init
         working-directory: modules/${{ matrix.module }}
@@ -127,13 +136,15 @@ jobs:
 
       - name: Terraform Test
         working-directory: modules/${{ matrix.module }}
+        env:
+          MODULE: ${{ matrix.module }}
         run: |
           # Runs any *.tftest.hcl under tests/. Silent skip if the module
           # has no tests yet — see CONTRIBUTING.md "Testing".
           if compgen -G "tests/*.tftest.hcl" > /dev/null; then
             terraform test
           else
-            echo "No tests/*.tftest.hcl in modules/${{ matrix.module }} — skipping."
+            echo "No tests/*.tftest.hcl in modules/$MODULE — skipping."
           fi
 
   # ── Validate the root meta-module ───────────────────────────────────
@@ -143,9 +154,9 @@ jobs:
     if: needs.detect.outputs.root_changed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
@@ -171,8 +182,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
         run: |
-          results="${{ join(needs.*.result, ', ') }}"
+          results="$RESULTS"
           echo "Job results: $results"
           if [[ "$results" == *"failure"* || "$results" == *"cancelled"* ]]; then
             echo "::error::A CI job failed or was cancelled."
