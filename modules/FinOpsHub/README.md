@@ -32,7 +32,7 @@ Canonical RG-drop precedents: Grafana v0.2.46, NetworkStack v0.2.8, PaloCluster 
 
 ```hcl
 module "finops_hub" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/FinOpsHub?ref=v0.2.49"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/FinOpsHub?ref=v0.2.49"
 
   subscription_acronym = "mgm"
   environment          = "prod"

@@ -116,7 +116,7 @@ updated.
 
 ```hcl
 module "aks" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Aks?ref=v0.2.65"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Aks?ref=v0.2.65"
 
   subscription_acronym = "api"
   environment          = "prod"

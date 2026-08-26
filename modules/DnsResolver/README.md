@@ -71,7 +71,7 @@ module "dns_resolver" {
 
 ```hcl
 module "dns_resolver" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/DnsResolver?ref=v0.2.59"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/DnsResolver?ref=v0.2.59"
 
   subscription_acronym = "con"
   environment          = "prod"

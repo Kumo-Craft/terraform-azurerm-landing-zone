@@ -50,7 +50,7 @@ module "defs" {
 
 ```hcl
 terraform {
-  source = "git::https://github.com/John6810/landing-zone//modules/PolicyDefinition?ref=v0.2.14"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PolicyDefinition?ref=v0.2.14"
 }
 
 inputs = {

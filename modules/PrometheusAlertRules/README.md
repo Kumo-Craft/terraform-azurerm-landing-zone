@@ -19,7 +19,7 @@ The scalar `action_group_id` variable has been removed. Use `action_group_ids` (
 
 ```hcl
 module "prometheus_alert_rules" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrometheusAlertRules?ref=v0.2.43"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrometheusAlertRules?ref=v0.2.43"
 
   location            = "germanywestcentral"
   resource_group_name = "rg-mgm-prod-gwc-monitor"
@@ -50,7 +50,7 @@ module "prometheus_alert_rules" {
 
 ```hcl
 module "prometheus_alert_rules" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrometheusAlertRules?ref=v0.2.43"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrometheusAlertRules?ref=v0.2.43"
 
   location            = "germanywestcentral"
   resource_group_name = "rg-api-prod-gwc-aks"

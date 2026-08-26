@@ -8,7 +8,7 @@ Map-shape module dispatching Azure Policy assignments to one of three scopes (Ma
 
 ```hcl
 module "policy_assignments" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PolicyAssignment?ref=v0.2.10"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PolicyAssignment?ref=v0.2.10"
 
   assignments = {
     "require-tag-environment" = {

@@ -20,7 +20,7 @@ Grant a managed identity `Storage Blob Data Reader` on a specific storage accoun
 
 ```hcl
 module "role_assignment" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/RoleAssignment?ref=main"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/RoleAssignment?ref=main"
 
   scope                = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-app-prod-gwc-data/providers/Microsoft.Storage/storageAccounts/stappprodgwcdata"
   principal_id         = "11111111-1111-1111-1111-111111111111"

@@ -8,7 +8,7 @@ Wraps `azurerm_security_center_workspace` to redirect a subscription's Microsoft
 
 ```hcl
 module "security_center_workspace" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SecurityCenterWorkspace?ref=v0.2.44"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SecurityCenterWorkspace?ref=v0.2.44"
 
   subscription_id            = "00000000-0000-0000-0000-000000000000"  # bare GUID OR full /subscriptions/ path
   log_analytics_workspace_id = "/subscriptions/.../providers/Microsoft.OperationalInsights/workspaces/law-mgmt"

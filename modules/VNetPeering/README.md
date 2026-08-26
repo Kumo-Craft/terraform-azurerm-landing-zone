@@ -8,7 +8,7 @@ Creates Azure VNet peerings. Each entry in the map creates one peering direction
 
 ```hcl
 module "vnet_peering" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/VNetPeering?ref=v0.2.5"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/VNetPeering?ref=v0.2.5"
 
   peerings = {
     "hub-to-spoke" = {

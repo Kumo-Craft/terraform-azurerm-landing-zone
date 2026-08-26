@@ -47,7 +47,7 @@ Canonical RG-drop precedents: NetworkStack v0.2.8, PaloCluster v0.2.25, PrivateD
 
 ```hcl
 module "grafana" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Grafana?ref=v0.2.46"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Grafana?ref=v0.2.46"
 
   subscription_acronym = "mgm"
   environment          = "prod"

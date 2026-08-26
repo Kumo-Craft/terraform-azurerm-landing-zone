@@ -8,7 +8,7 @@ Creates an Azure Monitor Workspace (managed Prometheus metrics store) with an op
 
 ```hcl
 module "azure_monitor_workspace" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AzureMonitorWorkspace?ref=v0.2.41"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AzureMonitorWorkspace?ref=v0.2.41"
 
   subscription_acronym = "mgm"
   environment          = "prod"

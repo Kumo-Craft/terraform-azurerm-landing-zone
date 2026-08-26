@@ -46,7 +46,7 @@ Note: Certificates already issued will remain valid until their original expiry 
 
 ```hcl
 module "tls_cert" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/TlsSelfSignedCert?ref=v0.2.70"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/TlsSelfSignedCert?ref=v0.2.70"
 
   cert_name    = "lb-internal-mtls"
   key_vault_id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-mgm-prod-gwc-security/providers/Microsoft.KeyVault/vaults/kv-mgm-prod-gwc-sec"
@@ -66,7 +66,7 @@ module "tls_cert" {
 
 ```hcl
 module "tls_cert" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/TlsSelfSignedCert?ref=v0.2.70"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/TlsSelfSignedCert?ref=v0.2.70"
 
   # cert_name is null → name computed as cert-{acr}-{env}-{region}-{workload}
   subscription_acronym = "aks"

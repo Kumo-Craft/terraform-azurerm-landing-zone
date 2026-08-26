@@ -18,7 +18,7 @@ One `azurerm_network_watcher_flow_log` resource is created per entry in `var.vne
 
 ```hcl
 module "flow_logs" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/FlowLogs?ref=v0.2.56"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/FlowLogs?ref=v0.2.56"
 
   subscription_acronym = "con"
   environment          = "nprd"

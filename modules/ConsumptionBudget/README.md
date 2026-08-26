@@ -18,7 +18,7 @@ Grounded in [Create and manage budgets](https://learn.microsoft.com/azure/cost-m
 
 ```hcl
 module "budget" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ConsumptionBudget?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ConsumptionBudget?ref=v0.3.0"
 
   subscription_acronym = "con"
   environment          = "prod"

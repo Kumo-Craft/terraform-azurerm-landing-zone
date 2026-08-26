@@ -8,7 +8,7 @@ Creates Azure Monitor Diagnostic Settings on multiple Azure resources, forwardin
 
 ```hcl
 module "diagnostic_settings" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/DiagnosticSettings?ref=v0.2.48"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/DiagnosticSettings?ref=v0.2.48"
 
   diagnostic_settings = {
     vnet = {

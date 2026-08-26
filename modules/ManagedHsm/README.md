@@ -49,7 +49,7 @@ Built-in roles (name → what it grants): **Administrator** (security domain, ba
 
 ```hcl
 module "hsm" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ManagedHsm?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ManagedHsm?ref=v0.3.0"
 
   subscription_acronym = "idt"
   environment          = "prod"

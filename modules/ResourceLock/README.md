@@ -8,7 +8,7 @@ Applies management locks (CanNotDelete or ReadOnly) to one or more existing Azur
 
 ```hcl
 module "resource_lock" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ResourceLock?ref=v0.2.15"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ResourceLock?ref=v0.2.15"
 
   locks = {
     rg_network = {

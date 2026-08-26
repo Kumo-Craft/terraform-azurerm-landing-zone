@@ -8,7 +8,7 @@ Deploys the full set of Azure Private Link Private DNS Zones using the official 
 
 ```hcl
 module "dns_rg" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
 
   subscription_acronym = "con"
   environment          = "prod"
@@ -19,7 +19,7 @@ module "dns_rg" {
 }
 
 module "private_dns_zones" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrivateDnsZones?ref=v0.2.9"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrivateDnsZones?ref=v0.2.9"
 
   location             = "germanywestcentral"
   resource_group_name  = module.dns_rg.name

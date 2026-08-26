@@ -8,7 +8,7 @@ Deploys an AVD **Autoscale Plan** that controls session host VM lifecycle (start
 
 ```hcl
 module "avd_scaling" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdScalingPlan?ref=v0.2.35"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdScalingPlan?ref=v0.2.35"
 
   subscription_acronym = "avd"
   environment          = "nprd"

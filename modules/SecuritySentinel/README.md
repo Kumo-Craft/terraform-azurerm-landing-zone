@@ -19,7 +19,7 @@ Grounded in Microsoft guidance ([Design a Log Analytics workspace architecture](
 
 ```hcl
 module "sentinel" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SecuritySentinel?ref=v0.2.91"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SecuritySentinel?ref=v0.2.91"
 
   subscription_acronym = "sec"
   environment          = "prod"

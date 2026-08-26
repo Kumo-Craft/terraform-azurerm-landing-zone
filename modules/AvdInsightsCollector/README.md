@@ -47,7 +47,7 @@ Via the [`Naming`](../Naming/) submodule with `extra_suffix = ["avdinsights"]`: 
 
 ```hcl
 module "avd_law" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/LogAnalyticsWorkspace?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/LogAnalyticsWorkspace?ref=v0.3.0"
 
   subscription_acronym = "avd"
   environment          = "prod"
@@ -58,7 +58,7 @@ module "avd_law" {
 }
 
 module "avd_insights" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdInsightsCollector?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdInsightsCollector?ref=v0.3.0"
 
   subscription_acronym = "avd"
   environment          = "prod"

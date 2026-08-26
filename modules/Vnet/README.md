@@ -55,7 +55,7 @@ subnets = [
 
 ```hcl
 module "vnet" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Vnet?ref=v0.2.57"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Vnet?ref=v0.2.57"
 
   subscription_acronym = "api"
   environment          = "prod"

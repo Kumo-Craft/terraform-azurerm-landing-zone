@@ -8,7 +8,7 @@ Creates an Azure Monitor Action Group with email and Azure App push notification
 
 ```hcl
 module "action_group" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ActionGroup?ref=v0.2.45"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ActionGroup?ref=v0.2.45"
 
   subscription_acronym = "mgm"
   environment          = "prod"

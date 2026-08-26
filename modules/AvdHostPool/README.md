@@ -32,7 +32,7 @@ CAF secure-by-default guidance requires the AVD control plane to be private wher
 
 ```hcl
 module "avd_pool" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdHostPool?ref=v0.2.31"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdHostPool?ref=v0.2.31"
 
   subscription_acronym = "avd"
   environment          = "nprd"

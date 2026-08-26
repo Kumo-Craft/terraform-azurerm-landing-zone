@@ -8,7 +8,7 @@ Creates an Azure Route Table with a configurable set of routes and optional mana
 
 ```hcl
 module "route_table" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/RouteTable?ref=v0.2.6"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/RouteTable?ref=v0.2.6"
 
   subscription_acronym          = "api"
   environment                   = "prod"

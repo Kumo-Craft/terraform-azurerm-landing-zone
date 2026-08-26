@@ -29,7 +29,7 @@ This follows the same tombstone approach used by NetworkWatcher v0.2.1, KeyVault
 
 ```hcl
 module "avd_app_group" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdApplicationGroup?ref=v0.2.33"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdApplicationGroup?ref=v0.2.33"
 
   subscription_acronym = "avd"
   environment          = "nprd"

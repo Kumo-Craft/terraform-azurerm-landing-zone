@@ -38,7 +38,7 @@ Creates an Azure Monitor Private Link Scope (AMPLS), links scoped services (Log 
 
 ```hcl
 module "ampls" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Ampls?ref=v0.2.63"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Ampls?ref=v0.2.63"
 
   name                = "pls-mgm-prod-gwc-management"
   resource_group_name = "rg-mgm-prod-gwc-management"
@@ -71,7 +71,7 @@ module "ampls" {
 
 ```hcl
 module "ampls" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Ampls?ref=v0.2.63"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Ampls?ref=v0.2.63"
 
   subscription_acronym = "mgm"
   environment          = "prod"

@@ -28,7 +28,7 @@ This is the Azure-native pattern documented under [Key Vault RBAC guide](https:/
 
 ```hcl
 module "key_vault" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/KeyVault?ref=KeyVault/v1.0.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/KeyVault?ref=KeyVault/v1.0.0"
 
   subscription_acronym = "api"
   environment          = "prod"

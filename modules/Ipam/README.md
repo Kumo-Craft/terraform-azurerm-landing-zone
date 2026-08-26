@@ -18,7 +18,7 @@ Grounded in Microsoft docs ([How IPAM works](https://learn.microsoft.com/azure/v
 
 ```hcl
 module "ipam" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Ipam?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Ipam?ref=v0.3.0"
 
   subscription_acronym = "con"
   environment          = "prod"
@@ -57,7 +57,7 @@ module "ipam" {
 
 ```hcl
 module "ipam" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Ipam?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Ipam?ref=v0.3.0"
 
   subscription_acronym = "con"
   environment          = "prod"

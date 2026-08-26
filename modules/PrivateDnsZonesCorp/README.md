@@ -8,7 +8,7 @@ Deploys a configurable list of **corporate-internal Azure Private DNS zones** (e
 
 ```hcl
 module "corp_dns_rg" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
 
   subscription_acronym = "con"
   environment          = "nprd"
@@ -19,7 +19,7 @@ module "corp_dns_rg" {
 }
 
 module "corp_dns_zones" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrivateDnsZonesCorp?ref=v0.2.88"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrivateDnsZonesCorp?ref=v0.2.88"
 
   resource_group_name = module.corp_dns_rg.name
 

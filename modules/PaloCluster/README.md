@@ -8,7 +8,7 @@ Deploys a complete Palo Alto VM-Series firewall cluster on Azure. The caller mus
 
 ```hcl
 module "palo_rg" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.25"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.25"
 
   subscription_acronym = "con"
   environment          = "prod"
@@ -19,7 +19,7 @@ module "palo_rg" {
 }
 
 module "palo_cluster" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PaloCluster?ref=v0.2.25"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PaloCluster?ref=v0.2.25"
 
   subscription_acronym = "con"
   environment          = "prod"

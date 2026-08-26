@@ -26,7 +26,7 @@ Defaults follow Microsoft's [Harden a managed domain](https://learn.microsoft.co
 
 ```hcl
 module "aadds" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/DomainServices?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/DomainServices?ref=v0.3.0"
 
   subscription_acronym = "idt"
   environment          = "prod"

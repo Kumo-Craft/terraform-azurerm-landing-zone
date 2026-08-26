@@ -8,7 +8,7 @@ Creates a zone-redundant NAT Gateway using the StandardV2 SKU together with its 
 
 ```hcl
 module "nat_gateway" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/NatGateway?ref=v0.2.40"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/NatGateway?ref=v0.2.40"
 
   subscription_acronym = "con"
   environment          = "prod"

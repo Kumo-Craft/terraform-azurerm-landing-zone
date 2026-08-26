@@ -8,7 +8,7 @@ Map-shape module dispatching Azure Policy exemptions to one of three scopes (Man
 
 ```hcl
 module "policy_exemptions" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PolicyExemption?ref=v0.2.11"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PolicyExemption?ref=v0.2.11"
 
   exemptions = {
     "waiver-sandbox-rg-from-deny-public-ip" = {

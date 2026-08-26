@@ -24,7 +24,7 @@ Deploys an AVD **Workspace** — the user-facing entry point that aggregates app
 
 ```hcl
 module "avd_ws" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdWorkspace?ref=v0.2.34"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdWorkspace?ref=v0.2.34"
 
   subscription_acronym = "avd"
   environment          = "nprd"

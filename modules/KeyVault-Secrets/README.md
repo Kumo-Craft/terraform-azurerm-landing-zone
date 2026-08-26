@@ -8,7 +8,7 @@ Pushes one or more secrets to an existing Azure Key Vault. Supports caller-provi
 
 ```hcl
 module "kv_secrets" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/KeyVault-Secrets?ref=v0.2.28"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/KeyVault-Secrets?ref=v0.2.28"
 
   key_vault_id = "/subscriptions/<guid>/resourceGroups/<rg>/providers/Microsoft.KeyVault/vaults/<kv-name>"
 

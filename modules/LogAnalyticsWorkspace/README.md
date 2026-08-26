@@ -21,7 +21,7 @@ Delegated to the [`Naming`](../Naming/) submodule — upstream `Azure/naming` sl
 
 ```hcl
 module "law" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/LogAnalyticsWorkspace?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/LogAnalyticsWorkspace?ref=v0.3.0"
 
   subscription_acronym = "sec"
   environment          = "prod"

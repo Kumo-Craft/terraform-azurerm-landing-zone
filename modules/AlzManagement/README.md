@@ -24,7 +24,7 @@ Otherwise, the next `terraform apply` will update the workspace retention from 3
 
 ```hcl
 module "alz_management" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AlzManagement?ref=v0.2.37"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AlzManagement?ref=v0.2.37"
 
   subscription_acronym = "mgm"
   environment          = "prod"

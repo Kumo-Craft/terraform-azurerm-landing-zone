@@ -32,7 +32,7 @@ Migration recipe for every subnet entry:
 
 ```hcl
 module "subnet" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
 
   virtual_network_id = "/subscriptions/.../virtualNetworks/vnet-api-prod-gwc-spoke"
 
@@ -57,7 +57,7 @@ module "subnet" {
 
 ```hcl
 module "subnet" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
 
   virtual_network_id = "/subscriptions/.../virtualNetworks/vnet-api-prod-gwc-spoke"
 
@@ -95,7 +95,7 @@ module "subnet" {
 
 ```hcl
 module "subnet" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
 
   virtual_network_id = "/subscriptions/.../virtualNetworks/vnet-api-prod-gwc-spoke"
 
@@ -118,7 +118,7 @@ module "subnet" {
 
 ```hcl
 module "subnet" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SubnetWithNsg?ref=v0.2.58"
 
   virtual_network_id = "/subscriptions/.../virtualNetworks/vnet-api-prod-gwc-spoke"
 

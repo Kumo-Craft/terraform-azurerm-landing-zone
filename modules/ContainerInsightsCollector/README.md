@@ -14,7 +14,7 @@ Creates an explicit Data Collection Rule (DCR) and DCR Association (DCRA) that r
 
 ```hcl
 module "container_insights" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ContainerInsightsCollector?ref=v0.2.84"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ContainerInsightsCollector?ref=v0.2.84"
 
   subscription_acronym       = "api"
   environment                = "prod"

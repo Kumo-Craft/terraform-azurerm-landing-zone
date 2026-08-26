@@ -27,7 +27,7 @@ Apply **once** with this block present, then delete it. This tells Terraform: "t
 
 ```hcl
 module "network_watcher" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/NetworkWatcher?ref=v0.2.1"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/NetworkWatcher?ref=v0.2.1"
 
   subscription_acronym = "con"
   environment          = "prod"

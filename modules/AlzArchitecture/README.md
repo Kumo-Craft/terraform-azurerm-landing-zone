@@ -8,7 +8,7 @@ Deploys the Azure Landing Zone management group hierarchy, subscription placemen
 
 ```hcl
 module "alz_architecture" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AlzArchitecture?ref=v0.2.36"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AlzArchitecture?ref=v0.2.36"
 
   architecture_name   = "prod"
   management_root_id  = "/providers/Microsoft.Management/managementGroups/090a1bf9-58cc-49fa-8a9e-3f7b0a100fa9"

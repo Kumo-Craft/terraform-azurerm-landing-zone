@@ -8,7 +8,7 @@ Creates one or more Azure Private Endpoints to securely connect PaaS services (K
 
 ```hcl
 module "private_endpoint" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrivateEndpoint?ref=PrivateEndpoint/v1.0.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrivateEndpoint?ref=PrivateEndpoint/v1.0.0"
 
   location            = "germanywestcentral"
   resource_group_name = "rg-api-prod-gwc-aks"

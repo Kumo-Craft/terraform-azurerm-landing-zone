@@ -8,7 +8,7 @@ Deploys one or more **Windows session host VMs** for an AVD host pool. Each VM g
 
 ```hcl
 module "avd_sh" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/AvdSessionHost?ref=v0.2.32"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/AvdSessionHost?ref=v0.2.32"
 
   subscription_acronym = "avd"
   environment          = "nprd"

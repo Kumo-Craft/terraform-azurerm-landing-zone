@@ -8,7 +8,7 @@ Creates one or more Azure Key Vault keys (RSA, EC, RSA-HSM, EC-HSM) with support
 
 ```hcl
 module "key_vault_key" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/KeyVault-Key?ref=v0.2.27"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/KeyVault-Key?ref=v0.2.27"
 
   keys = {
     cmk_disk = {

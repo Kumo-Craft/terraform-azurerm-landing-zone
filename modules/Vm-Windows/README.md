@@ -10,7 +10,7 @@ The local admin user is created at provisioning (Azure constraint — cannot be 
 
 ```hcl
 module "vm_app" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/Vm-Windows?ref=v0.2.72"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/Vm-Windows?ref=v0.2.72"
 
   subscription_acronym = "api"
   environment          = "prod"

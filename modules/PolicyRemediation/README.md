@@ -8,7 +8,7 @@ Map-shape module dispatching Azure Policy remediation tasks to one of four scope
 
 ```hcl
 module "policy_remediation" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PolicyRemediation?ref=v0.2.13"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PolicyRemediation?ref=v0.2.13"
 
   remediations = {
     "remediate-law-vms-prod-sub" = {

@@ -27,7 +27,7 @@ The Resource Group is **caller-provided** (`resource_group_name`) — repo conve
 
 ```hcl
 module "hsm_stack" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ManagedHsmStack?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ManagedHsmStack?ref=v0.3.0"
 
   subscription_acronym = "idt"
   environment          = "prod"

@@ -14,7 +14,7 @@ Callers relying on Microsoft-hosted Azure DevOps agents or other clients without
 
 ```hcl
 module "log_analytics_alerts" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
 
   # REQUIRED after v0.2.47 if using Microsoft-hosted ADO agents:
   ingestion_public_network_access_enabled = true
@@ -41,7 +41,7 @@ The `azapi` provider is required for custom table creation via the `Microsoft.Op
 
 ```hcl
 module "log_analytics_alerts" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
 
   subscription_acronym = "mgm"
   environment          = "prod"
@@ -109,7 +109,7 @@ inputs = {
 
 ```hcl
 module "log_analytics_alerts" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/LogAnalyticsAlerts?ref=v0.2.47"
 
   # ... naming / location / law_id / action_group_ids ...
 

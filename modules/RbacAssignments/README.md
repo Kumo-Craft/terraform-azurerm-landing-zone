@@ -8,7 +8,7 @@ Assigns Azure RBAC roles to Entra ID groups (resolved by display name) and to ma
 
 ```hcl
 module "rbac_assignments" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/RbacAssignments?ref=v0.2.75"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/RbacAssignments?ref=v0.2.75"
 
   group_assignments = {
     aks_cluster_admin = {

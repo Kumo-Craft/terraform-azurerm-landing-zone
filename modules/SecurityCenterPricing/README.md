@@ -17,7 +17,7 @@ La ressource est un **singleton par `resource_type` au niveau souscription** : p
 
 ```hcl
 module "defender_plans" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/SecurityCenterPricing?ref=v0.3.0"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/SecurityCenterPricing?ref=v0.3.0"
 
   plans = {
     VirtualMachines = { tier = "Standard", subplan = "P2" }

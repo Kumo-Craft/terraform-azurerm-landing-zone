@@ -8,7 +8,7 @@ Creates an Azure Virtual WAN with virtual hubs, VPN gateways, VPN sites, and sit
 
 ```hcl
 module "vwan" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/vwan?ref=v0.2.17"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/vwan?ref=v0.2.17"
 ```
 
 ### Terragrunt

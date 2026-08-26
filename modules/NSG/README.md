@@ -8,7 +8,7 @@ Creates one or more Azure Network Security Groups in a single module call. Each 
 
 ```hcl
 module "nsg" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/NSG?ref=v0.2.4"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/NSG?ref=v0.2.4"
 
   subscription_acronym = "api"
   environment          = "prod"

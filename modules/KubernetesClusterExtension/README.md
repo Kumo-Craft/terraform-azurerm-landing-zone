@@ -30,7 +30,7 @@ See the full catalog: https://learn.microsoft.com/azure/aks/cluster-extensions
 
 ```hcl
 module "kce" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/KubernetesClusterExtension?ref=v0.2.85"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/KubernetesClusterExtension?ref=v0.2.85"
 
   name           = "flux"
   cluster_id     = "/subscriptions/.../managedClusters/aks-api-prod-gwc-001"

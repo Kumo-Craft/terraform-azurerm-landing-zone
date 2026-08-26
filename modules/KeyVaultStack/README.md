@@ -41,7 +41,7 @@ The downstream consumer is now expected to wire the RG, its lock, and its role a
 
 ```hcl
 module "key_vault_stack" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/KeyVaultStack?ref=v0.2.2"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/KeyVaultStack?ref=v0.2.2"
 
   subscription_acronym = "api"
   environment          = "prod"

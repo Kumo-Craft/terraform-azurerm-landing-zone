@@ -8,7 +8,7 @@ Creates an Azure Storage Account with configurable replication, network access, 
 
 ```hcl
 module "storage_account" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/StorageAccount?ref=v0.2.30"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/StorageAccount?ref=v0.2.30"
 
   subscription_acronym = "mgm"
   environment          = "prod"

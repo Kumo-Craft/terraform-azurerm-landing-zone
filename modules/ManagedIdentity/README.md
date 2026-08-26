@@ -8,7 +8,7 @@ Creates a User Assigned Managed Identity with optional Federated Identity Creden
 
 ```hcl
 module "managed_identity" {
-  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ManagedIdentity?ref=v0.2.38"
+  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ManagedIdentity?ref=v0.2.38"
 
   subscription_acronym = "api"
   environment          = "prod"
