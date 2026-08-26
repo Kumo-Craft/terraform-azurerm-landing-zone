@@ -35,7 +35,7 @@ In-repo callers use the relative path shown below. External consumers must pin t
 
 ```hcl
 # External consumers (Terragrunt / standalone)
-source = "git::https://github.com/Kumo-Craft/Modules.git//modules/Naming?ref=v0.2.89"
+source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/Naming?ref=v0.2.89"
 ```
 
 ### Standalone (inside another module)

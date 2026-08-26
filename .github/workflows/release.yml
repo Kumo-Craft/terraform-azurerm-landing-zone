@@ -1,35 +1,44 @@
-# Release — GitHub Actions workflow (migrated back from
-# pipelines/release.yml, the Azure DevOps port).
+# Release Assets — builds the terraform-docs bundle + notes for a tag.
 #
-# Triggers on every single-global-version SemVer tag (v0.1.0, v0.2.1, …).
-# Builds:
-#   - terraform-docs Markdown per submodule, bundled in
-#     terraform-docs-<tag>.tar.gz.
-#   - Auto-generated release notes (git log since the previous tag).
-# Both land in a real GitHub Release (something Azure DevOps had no
-# equivalent for — the old pipeline had to fake it with build artifacts).
+# Two entry points:
+#   - `workflow_call` from Release Please (the normal path): the release
+#     and its CHANGELOG-based notes already exist — this only attaches the
+#     terraform-docs bundle to it.
+#   - direct `v*` tag push (fallback for hand-cut tags): no release exists
+#     yet — this creates one with auto-generated notes (git log since the
+#     previous tag) and the bundle attached.
 #
-# If the repo is wired to an HCP Terraform private registry, pushing the
-# tag still auto-imports it as a new module version (independent of this
-# workflow).
+# Both paths are idempotent: an existing release gets `upload --clobber`,
+# so a double trigger (e.g. a PAT-created tag firing the push trigger on
+# top of the workflow_call) never fails.
 
-name: Release
+name: Release Assets
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Existing v* tag to build assets for'
+        required: true
+        type: string
 
 permissions:
-  contents: write   # create the GitHub Release
+  contents: write   # upload assets / create the GitHub Release
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   release:
-    name: Build docs bundle + GitHub Release
+    name: Build docs bundle + attach to release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0   # full history — needed for "git log since previous tag"
 
       - name: Install terraform-docs
@@ -44,7 +53,6 @@ jobs:
       - name: Generate terraform-docs per submodule
         run: |
           set -euo pipefail
-          TAG="$GITHUB_REF_NAME"
           OUT="terraform-docs-$TAG"
           mkdir -p "$OUT"
           for dir in modules/*/; do
@@ -61,10 +69,9 @@ jobs:
           tar -czf "$RUNNER_TEMP/$OUT.tar.gz" "$OUT"
           ls -la "$RUNNER_TEMP/$OUT.tar.gz"
 
-      - name: Generate release notes
+      - name: Generate release notes (fallback path only)
         run: |
           set -euo pipefail
-          TAG="$GITHUB_REF_NAME"
           PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
           if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
           NOTES="$RUNNER_TEMP/release-notes-$TAG.md"
@@ -76,18 +83,24 @@ jobs:
             git log --no-merges --pretty=format:'- %s (%h)' "$RANGE"
             echo ""
           } > "$NOTES"
-          cat "$NOTES"
-          # Also attach the notes to the run summary.
           cat "$NOTES" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create GitHub Release
+      - name: Attach assets (create the release if missing)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="$GITHUB_REF_NAME"
-          gh release create "$TAG" \
-            --verify-tag \
-            --title "$TAG" \
-            --notes-file "$RUNNER_TEMP/release-notes-$TAG.md" \
-            "$RUNNER_TEMP/terraform-docs-$TAG.tar.gz"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Release Please path: the release + CHANGELOG notes exist — only
+            # attach the bundle (idempotent thanks to --clobber).
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+              "$RUNNER_TEMP/terraform-docs-$TAG.tar.gz"
+            echo "Assets attached to existing release $TAG."
+          else
+            # Hand-pushed tag: create the release with git-log notes.
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$TAG" \
+              --notes-file "$RUNNER_TEMP/release-notes-$TAG.md" \
+              "$RUNNER_TEMP/terraform-docs-$TAG.tar.gz"
+          fi

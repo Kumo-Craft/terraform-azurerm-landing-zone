@@ -8,13 +8,13 @@ Built for [Terragrunt](https://terragrunt.gruntwork.io/) isolation but usable st
 
 The root module deploys a single resource group following the house naming convention. Everything else is a submodule consumed directly.
 
-### From the HCP Terraform private registry (once published)
+### From the Terraform Registry (once published)
 
 ```hcl
 # The root module — bootstraps a landing-zone RG
 module "lz" {
-  source  = "John6810/landing-zone/azurerm"
-  version = "0.1.0"
+  source  = "Kumo-Craft/landing-zone/azurerm"
+  version = "~> 0.1"
 
   subscription_acronym = "shc"
   environment          = "nprd"
@@ -25,8 +25,8 @@ module "lz" {
 
 # Any submodule — e.g. a Key Vault
 module "kv" {
-  source  = "John6810/landing-zone/azurerm//modules/KeyVault"
-  version = "0.1.0"
+  source  = "Kumo-Craft/landing-zone/azurerm//modules/KeyVault"
+  version = "~> 0.1"
   # ...
 }
 ```
@@ -35,7 +35,7 @@ module "kv" {
 
 ```hcl
 module "kv" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/KeyVault?ref=v0.1.0"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/KeyVault?ref=v0.1.0"
   # ...
 }
 ```
@@ -229,10 +229,20 @@ Releases in the `v0.x.y` series are pre-1.0 — minor versions MAY include break
 
 ### How a release is cut
 
-1. Merge changes to `main` (`terraform validate`/`fmt` clean on root + touched submodules, tests green).
-2. Tag the commit: `git tag v<X.Y.Z> && git push origin v<X.Y.Z>`.
-3. Pushing the tag triggers the [`Release`](.github/workflows/release.yml) GitHub Actions workflow, which builds the terraform-docs bundle + auto-generated release notes (git log since the previous tag) and publishes them as a GitHub Release.
-4. If the repo is connected to an HCP Terraform private registry, the tag is auto-imported as a new version.
+Releases are automated by [release-please](.github/workflows/release-please.yml)
+from Conventional Commits (`feat:` → MINOR, `fix:` → PATCH, `feat!:` /
+`BREAKING CHANGE:` → MAJOR — pre-1.0, majors are bumped as minors):
+
+1. Merge changes to `main` with conventional commit messages (CI green).
+2. release-please opens/updates a **release PR** (version bump + CHANGELOG).
+3. Merging that PR creates the `v<X.Y.Z>` tag + GitHub Release, and the
+   [`Release Assets`](.github/workflows/release.yml) workflow attaches the
+   terraform-docs bundle.
+4. The Terraform Registry auto-imports the new tag as a module version
+   (once the repo is published there — see `.github/workflows/README.md`).
+
+Pushing a `v*` tag by hand still works and produces the same release +
+assets (fallback path).
 
 ### Legacy per-module tags
 

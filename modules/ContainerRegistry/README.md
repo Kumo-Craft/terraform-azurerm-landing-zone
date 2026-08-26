@@ -8,7 +8,7 @@ Deploys an Azure Container Registry (ACR) with Premium SKU, zone redundancy, geo
 
 ```hcl
 module "container_registry" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/ContainerRegistry?ref=v0.2.89"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/ContainerRegistry?ref=v0.2.89"
 
   subscription_acronym = "api"
   environment          = "prod"

@@ -1,0 +1,22 @@
+# terraform-docs config — used by .github/workflows/terraform-docs.yml to
+# inject the generated inputs/outputs reference between the
+# BEGIN_TF_DOCS / END_TF_DOCS markers of each submodule README.
+# The Terraform Docs workflow creates the markers (or a whole README) for
+# modules that don't have them yet.
+
+formatter: markdown table
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+sort:
+  enabled: true
+  by: required
+
+settings:
+  anchor: false

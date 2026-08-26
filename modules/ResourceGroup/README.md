@@ -44,7 +44,7 @@ include "root" { path = find_in_parent_folders("root.hcl") }
 include "sub"  { path = find_in_parent_folders("corporate.hcl") }
 
 terraform {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/ResourceGroup?ref=v0.2.89"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/ResourceGroup?ref=v0.2.89"
 }
 
 inputs = {
@@ -65,7 +65,7 @@ inputs = {
 
 ```hcl
 terraform {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/ResourceGroup?ref=v0.2.89"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/ResourceGroup?ref=v0.2.89"
 }
 
 inputs = {

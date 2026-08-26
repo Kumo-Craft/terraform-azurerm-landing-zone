@@ -10,7 +10,7 @@ Deploys an Azure Application Gateway v2 (WAF_v2 SKU) with a WAF Policy (Microsof
 
 ```hcl
 module "application_gateway" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/ApplicationGateway?ref=v0.2.89"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/ApplicationGateway?ref=v0.2.89"
 
   subscription_acronym = "api"
   environment          = "prod"

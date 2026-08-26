@@ -1,0 +1,55 @@
+# Release Please — automated releases from Conventional Commits.
+#
+# On every push to main, release-please computes the next SemVer from the
+# commit messages (feat: → minor, fix: → patch; pre-1.0 breaking changes
+# bump the minor, per release-please-config.json) and opens/updates a
+# single "release PR" carrying the version bump + CHANGELOG.md. Merging
+# that PR creates the v<X.Y.Z> tag + GitHub Release; the release-assets
+# job below then attaches the terraform-docs bundle by calling the
+# reusable Release Assets workflow (release.yml).
+#
+# WHY THE ASSETS ARE CHAINED HERE: tags created with the default
+# GITHUB_TOKEN do NOT trigger other workflows (GitHub anti-recursion), so
+# release.yml's own `on: push: tags` would never fire for release-please
+# tags. Calling it explicitly closes the gap. Hand-pushed tags still take
+# the direct trigger path.
+#
+# CAVEAT — CI on the release PR: a PR opened with the default token gets
+# no workflow runs, so the required "CI OK" check stays missing. Either
+# merge it with the admin override (it only touches CHANGELOG.md +
+# version references), close/reopen it once (reopening as a user triggers
+# CI), or set a fine-grained PAT (contents+PRs: write) as the
+# RELEASE_PLEASE_TOKEN secret to make release PRs behave like yours.
+
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release PR / tag
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+  release-assets:
+    name: Attach release assets
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}

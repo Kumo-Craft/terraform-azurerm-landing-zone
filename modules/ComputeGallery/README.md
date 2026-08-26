@@ -8,7 +8,7 @@ Deploys an **Azure Compute Gallery** (Shared Image Gallery) and, optionally, a s
 
 ```hcl
 module "compute_gallery" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/ComputeGallery?ref=v0.3.0"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/ComputeGallery?ref=v0.3.0"
 
   subscription_acronym = "avd"
   environment          = "nprd"

@@ -8,7 +8,7 @@ Creates an Azure DDoS Protection Plan. Names follow the `ddos-{subscription_acro
 
 ```hcl
 module "ddos_protection" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/DdosProtection?ref=v0.2.89"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/DdosProtection?ref=v0.2.89"
 
   subscription_acronym = "con"
   environment          = "prod"

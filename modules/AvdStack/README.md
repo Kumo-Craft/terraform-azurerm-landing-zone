@@ -25,7 +25,7 @@ It **consumes existing resource groups** (repo convention — it never creates R
 
 ```hcl
 module "avd" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/AvdStack?ref=v0.5.0"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/AvdStack?ref=v0.5.0"
 
   subscription_acronym = "avd"
   environment          = "nprd"

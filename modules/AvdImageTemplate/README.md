@@ -14,7 +14,7 @@ The default shape matches the AVD golden-image flow:
 
 ```hcl
 module "avd_image_template" {
-  source = "git::https://github.com/Kumo-Craft/Modules.git//modules/AvdImageTemplate?ref=v0.4.0"
+  source = "git::https://github.com/Kumo-Craft/terraform-azurerm-landing-zone.git//modules/AvdImageTemplate?ref=v0.4.0"
 
   template_name     = "it-win11-avd-m365-dev"
   location          = "germanywestcentral"
