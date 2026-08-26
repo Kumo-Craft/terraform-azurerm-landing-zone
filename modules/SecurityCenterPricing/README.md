@@ -68,3 +68,43 @@ Pas d'output `resource` brut — exposer l'objet complet ferait remonter d'éven
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"` : mapping tier/subplan, format `enabled_plans`, bloc `extension`, et validators (tier hors enum, nom d'extension vide). Run : `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_security_center_subscription_pricing.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/security_center_subscription_pricing) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| plans | Plans Defender for Cloud à activer, clés par resource\_type (la clé de<br>map EST le resource\_type — ex. "VirtualMachines", "StorageAccounts",<br>"KeyVaults", "Containers", "CloudPosture", "Arm", "Dns", "Api", ...).<br>La liste des resource\_type valides évolue côté Azure — le provider la<br>valide au plan, donc le module ne la fige pas ici.<br><br>  - tier      : "Free" ou "Standard". Défaut = "Standard" (secure-by-default,<br>                Defender ON) — ⚠️ impact coût, mettre "Free" pour désactiver.<br>  - subplan   : variante optionnelle (ex. "P1"/"P2" pour VirtualMachines,<br>                "DefenderForStorageV2" pour StorageAccounts). Omettre sinon.<br>                Immutable (ForceNew).<br>  - extension : sous-fonctionnalités Defender (surtout pour CloudPosture /<br>                VirtualMachines) — ex. AgentlessVmScanning,<br>                SensitiveDataDiscovery, ContainerRegistriesVulnerabilityAssessments,<br>                AgentlessDiscoveryForKubernetes. Une extension non déclarée<br>                n'est PAS activée. `additional_extension_properties` = paires<br>                clé/valeur requises par certaines extensions (ex. ExclusionTags). | <pre>map(object({<br>    # Secure-by-default (CKV_AZURE_19): tier defaults to<br>    # "Standard" (Defender ON) when omitted for a given resource_type.<br>    # ⚠️ COST: "Standard" facture TOUTES les ressources de ce type dans la<br>    #    sub. Passer explicitement tier = "Free" pour désactiver un plan.<br>    tier    = optional(string, "Standard")<br>    subplan = optional(string)<br>    extension = optional(list(object({<br>      name                            = string<br>      additional_extension_properties = optional(map(string))<br>    })), [])<br>  }))</pre> | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| enabled\_plans | Map resource\_type => "tier" ou "tier/subplan" des plans configurés. |
+| plan\_ids | Map resource\_type => resource ID du plan (/subscriptions/../providers/Microsoft.Security/pricings/<type>). |
+<!-- END_TF_DOCS -->

@@ -115,3 +115,45 @@ The module validates the format at plan time.
 |------|-------------|
 | `ids` | Map of exemption name => resource ID (merged across all scopes). |
 | `names` | Map of exemption name => resource name (merged across all scopes). |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_management_group_policy_exemption.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/management_group_policy_exemption) | resource |
+| [azurerm_resource_group_policy_exemption.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group_policy_exemption) | resource |
+| [azurerm_subscription_policy_exemption.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subscription_policy_exemption) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| exemptions | Map of policy exemptions. Key = exemption name (must be unique within scope).<br><br>Exactly ONE of these must be set per exemption:<br>  - resource\_group\_id   : full RG resource ID<br>  - subscription\_id     : full subscription path (/subscriptions/<guid>)<br>  - management\_group\_id : full MG resource ID<br><br>Other fields:<br>  - policy\_assignment\_id            : full resource ID of the policy assignment to exempt.<br>  - exemption\_category              : 'Waiver' (accept risk) or 'Mitigated' (compensating control).<br>  - display\_name                    : human-readable name shown in the portal.<br>  - description                     : justification — MANDATORY for audit trail.<br>  - expires\_on                      : RFC3339 timestamp. Without it, exemption is permanent.<br>  - policy\_definition\_reference\_ids : for initiative-scoped assignments, list of specific child<br>                                       policies to exempt. Empty = exempt all child policies.<br>  - metadata                        : free-form tags (owner, ticket ID, etc.). | <pre>map(object({<br>    # ─── Scope — exactly ONE of the following must be set ────<br>    resource_group_id   = optional(string)<br>    subscription_id     = optional(string)<br>    management_group_id = optional(string)<br><br>    # ─── Exemption details ──────────────────────────────────<br>    policy_assignment_id            = string<br>    exemption_category              = optional(string, "Waiver")<br>    display_name                    = string<br>    description                     = optional(string)<br>    expires_on                      = optional(string)<br>    policy_definition_reference_ids = optional(list(string))<br>    metadata                        = optional(map(string))<br>  }))</pre> | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of exemption key to resource ID (merged across all scopes). |
+| names | Map of exemption key to resource name (merged across all scopes). |
+<!-- END_TF_DOCS -->

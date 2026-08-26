@@ -99,3 +99,51 @@ inputs = {
 | resources | Map of key => complete PE resource object |
 | ids | Map of key => PE ID |
 | private_ip_addresses | Map of key => private IP address |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_private_endpoint.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_endpoint) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region for Private Endpoints | `string` | n/a | yes |
+| private\_endpoints | A map of Private Endpoint configurations. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>Each entry must set EXACTLY ONE of `resource_id` or `resource_alias`:<br>- `resource_id`    targets a regular Azure resource (Key Vault, Storage<br>  Account, etc.) and uses `private_connection_resource_id` at the<br>  provider level. Requires `subresource_names` (e.g. ["vault"]).<br>- `resource_alias` targets a Private Link Service by alias string<br>  (e.g. third-party PLS, cross-subscription endpoints) and uses<br>  `private_connection_resource_alias` at the provider level.<br>  `subresource_names` is typically empty for alias-based connections.<br><br>Object fields:<br>- `name`                           - (Required) Private Endpoint name.<br>- `resource_id`                    - (Optional) Target Azure resource ID. Mutually exclusive with `resource_alias`.<br>- `resource_alias`                 - (Optional) Private Link Service alias. Mutually exclusive with `resource_id`.<br>- `subresource_names`              - (Optional) Subresources to expose (e.g. ["vault"], ["blob"]). Required when `resource_id` is set; ignored for alias-based PEs.<br>- `is_manual_connection`           - (Optional) Manual connection requiring approval. Defaults to false.<br>- `request_message`                - (Optional) Message for manual connections. NOTE: this string appears in plan output — do NOT embed credentials or tokens.<br>- `private_ip_address`             - (Optional) Static private IP address.<br>- `member_name`                    - (Optional) Member name for IP config. Defaults to "default".<br>- `custom_network_interface_name`  - (Optional) Custom NIC name.<br>- `private_dns_zone_group`         - (Optional) DNS zone group configuration.<br>- `tags`                           - (Optional) Tags specific to this endpoint. | <pre>map(object({<br>    name                          = string<br>    resource_id                   = optional(string)<br>    resource_alias                = optional(string)<br>    subresource_names             = optional(list(string), [])<br>    is_manual_connection          = optional(bool, false)<br>    request_message               = optional(string)<br>    private_ip_address            = optional(string)<br>    member_name                   = optional(string, "default")<br>    custom_network_interface_name = optional(string)<br>    private_dns_zone_group = optional(object({<br>      name                 = optional(string, "default")<br>      private_dns_zone_ids = list(string)<br>    }))<br>    tags = optional(map(string), {})<br>  }))</pre> | n/a | yes |
+| resource\_group\_name | Resource group name | `string` | n/a | yes |
+| subnet\_id | Subnet ID for deploying Private Endpoints | `string` | n/a | yes |
+| tags | Common tags to apply to all Private Endpoints | `map(string)` | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of endpoint key => Private Endpoint ID |
+| private\_ip\_addresses | Map of endpoint key => private IP address |
+| resources | Map of endpoint key => complete Private Endpoint resource object |
+<!-- END_TF_DOCS -->

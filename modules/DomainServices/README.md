@@ -124,3 +124,70 @@ inputs = {
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: slug naming, hardened security defaults, optional LDAPS, optional lock, and validators (NetBIOS label length, FQDN, sku, subnet id). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_active_directory_domain_service.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/active_directory_domain_service) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| domain\_name | The DNS domain name for the managed domain (FQDN, e.g. aadds.contoso.com).<br><br>Constraints:<br>- Must be a valid FQDN with at least two labels.<br>- The leading label (used as the NetBIOS name) must be <= 15 characters.<br>- Use a **custom, routable** domain you own. Do NOT use the tenant default<br>  `*.onmicrosoft.com` — it is not routable and prevents secure LDAP with<br>  your own certificate (Microsoft owns that DNS namespace).<br>Changing this forces a new managed domain. | `string` | n/a | yes |
+| location | Azure region where the managed domain is deployed. | `string` | n/a | yes |
+| replica\_subnet\_id | Resource ID of the subnet for the initial replica set (dedicated /24+ subnet, NSG allowing AzureActiveDirectoryDomainServices). Changing this forces a new managed domain. | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the managed domain. | `string` | n/a | yes |
+| domain\_configuration\_type | Configuration type. FullySynced (User Forest — syncs all objects) or ResourceTrusting (Resource Forest). Changing this forces a new managed domain. | `string` | `"FullySynced"` | no |
+| environment | Environment (e.g. prod, nprd). | `string` | `null` | no |
+| filtered\_sync\_enabled | Enable group-based filtered (scoped) synchronisation. | `bool` | `false` | no |
+| lock | Optional Resource Lock. The resource also carries an unconditional<br>`lifecycle.prevent_destroy` guard at the Terraform level — this variable adds<br>a second, Azure-side guard that survives state loss/refresh.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit resource (display) name. If null, computed from naming components as aadds-{acronym}-{env}-{region}-{workload}. | `string` | `null` | no |
+| notifications | Alert notifications for the managed domain (extra recipients + notify AAD DC Administrators / Global Administrators). | <pre>object({<br>    additional_recipients = optional(list(string), [])<br>    notify_dc_admins      = optional(bool, true)<br>    notify_global_admins  = optional(bool, true)<br>  })</pre> | `{}` | no |
+| region\_code | Region code (e.g. gwc, weu). | `string` | `null` | no |
+| secure\_ldap | Optional secure LDAP (LDAPS) configuration. Null = LDAPS disabled.<br>  - pfx\_certificate          : base64-encoded PKCS#12 (PFX) bundle holding the LDAPS cert + key.<br>  - pfx\_certificate\_password : password decrypting the PFX bundle.<br>  - external\_access\_enabled  : expose LDAPS (TCP 636) to the Internet. Default false —<br>                               keep OFF unless the subnet NSG restricts source ranges,<br>                               else you invite Internet bruteforce.<br>Marked sensitive: the whole object carries the certificate + password. | <pre>object({<br>    enabled                  = optional(bool, true)<br>    external_access_enabled  = optional(bool, false)<br>    pfx_certificate          = string<br>    pfx_certificate_password = string<br>  })</pre> | `null` | no |
+| security | Managed domain security settings. Hardened by default per Microsoft's<br>"Harden a Microsoft Entra Domain Services managed domain":<br>  - Kerberos armoring ENABLED<br>  - NTLM v1, TLS 1.0, Kerberos RC4 DISABLED<br>  - NTLM password sync DISABLED<br>  - Kerberos password sync ENABLED (required for Kerberos authentication)<br>Set `sync_on_prem_passwords = true` only for hybrid tenants using Entra Connect.<br>Note: disabling `sync_ntlm_passwords` breaks LDAP simple binds — keep it off<br>unless a legacy app requires them. | <pre>object({<br>    kerberos_armoring_enabled       = optional(bool, true)  # ON  — FAST/Kerberos armoring<br>    kerberos_rc4_encryption_enabled = optional(bool, false) # OFF — weak cipher<br>    ntlm_v1_enabled                 = optional(bool, false) # OFF — legacy NTLM v1<br>    tls_v1_enabled                  = optional(bool, false) # OFF — legacy TLS 1.0<br>    sync_kerberos_passwords         = optional(bool, true)  # ON  — required for Kerberos auth<br>    sync_ntlm_passwords             = optional(bool, false) # OFF — do not sync NTLM hashes<br>    sync_on_prem_passwords          = optional(bool, false) # OFF — enable only for hybrid (Entra Connect)<br>  })</pre> | `{}` | no |
+| sku | SKU for the managed domain. One of Standard, Enterprise, Premium. | `string` | `"Standard"` | no |
+| subscription\_acronym | Subscription acronym (e.g. idt, con, mgm). | `string` | `null` | no |
+| tags | Tags to apply to the managed domain. | `map(string)` | `{}` | no |
+| workload | Workload name / naming suffix segment (e.g. domain). | `string` | `"domain"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| deployment\_id | Unique ID for the managed domain deployment. |
+| domain\_controller\_ip\_addresses | Domain controller IP addresses of the initial replica set (typically two). Point the VNet's custom DNS servers at these. |
+| domain\_name | The DNS domain name of the managed domain. |
+| id | The ID of the managed domain. |
+| initial\_replica\_set\_id | ID of the initial replica set. |
+| lock\_ids | Map of management lock IDs (empty when var.lock is null). |
+| name | The name of the managed domain resource. |
+<!-- END_TF_DOCS -->

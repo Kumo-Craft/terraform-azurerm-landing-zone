@@ -123,3 +123,108 @@ inputs = {
 
 - **ADF Managed Virtual Network** is DISABLED (`managed_virtual_network_enabled = false`). Enabling this requires Azure Private Endpoint support and approved integration runtimes routed through PE. Callers cannot opt-in without modifying module code.
 - **Palo Alto Networks integration** is NOT included in this module — must be wired externally if required.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| adf\_storage\_blob | ../RoleAssignment | n/a |
+| adf\_storage\_reader | ../RoleAssignment | n/a |
+| adx\_eventhub\_receiver | ../RoleAssignment | n/a |
+| adx\_storage\_blob | ../RoleAssignment | n/a |
+| cost\_mgmt\_exports\_storage | ../RoleAssignment | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_data_factory.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory) | resource |
+| [azurerm_data_factory_dataset_parquet.ingestion](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory_dataset_parquet) | resource |
+| [azurerm_data_factory_dataset_parquet.msexports](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory_dataset_parquet) | resource |
+| [azurerm_data_factory_linked_service_data_lake_storage_gen2.storage](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory_linked_service_data_lake_storage_gen2) | resource |
+| [azurerm_data_factory_pipeline.msexports_etl](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory_pipeline) | resource |
+| [azurerm_data_factory_trigger_blob_event.msexports](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/data_factory_trigger_blob_event) | resource |
+| [azurerm_eventgrid_event_subscription.ingestion_to_eventhub](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/eventgrid_event_subscription) | resource |
+| [azurerm_eventgrid_system_topic.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/eventgrid_system_topic) | resource |
+| [azurerm_eventhub.costs_ingestion](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/eventhub) | resource |
+| [azurerm_eventhub_namespace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/eventhub_namespace) | resource |
+| [azurerm_kusto_cluster.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_cluster) | resource |
+| [azurerm_kusto_database.hub](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database) | resource |
+| [azurerm_kusto_database.ingestion](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database) | resource |
+| [azurerm_kusto_database_principal_assignment.adf_hub_viewer](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database_principal_assignment) | resource |
+| [azurerm_kusto_database_principal_assignment.adf_ingestion](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database_principal_assignment) | resource |
+| [azurerm_kusto_database_principal_assignment.hub_additional_viewers](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database_principal_assignment) | resource |
+| [azurerm_kusto_database_principal_assignment.ingestion_additional_viewers](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_database_principal_assignment) | resource |
+| [azurerm_kusto_eventgrid_data_connection.costs](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_eventgrid_data_connection) | resource |
+| [azurerm_kusto_script.hub_setup](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_script) | resource |
+| [azurerm_kusto_script.ingestion_setup](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kusto_script) | resource |
+| [azurerm_storage_account.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account) | resource |
+| [azurerm_storage_blob.settings](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_blob) | resource |
+| [azurerm_storage_container.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) | resource |
+| [azurerm_storage_management_policy.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_management_policy) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region (e.g. germanywestcentral) | `string` | n/a | yes |
+| resource\_group\_name | Name of the resource group where FinOpsHub resources will be deployed. Must be created by the caller (e.g. via ../ResourceGroup at root). | `string` | n/a | yes |
+| adx\_disk\_encryption\_enabled | Encrypt the ADX cluster's VM disks (hot-cache data volumes + OS disk) at rest with Microsoft-managed keys. Secure-by-default true (CKV\_AZURE\_74). | `bool` | `true` | no |
+| adx\_double\_encryption\_enabled | Enable infrastructure-level (double) encryption on the ADX cluster storage<br>(CKV\_AZURE\_75). OPT-IN: default false.<br><br>BREAKING / RECREATION: this property can only be set at cluster CREATION and<br>cannot be changed afterwards (Azure platform constraint — see<br>https://learn.microsoft.com/azure/data-explorer/cluster-encryption-double).<br>The azurerm provider marks it ForceNew, so flipping this on an EXISTING<br>cluster forces the cluster to be DESTROYED and RECREATED (raw ingested data<br>is lost unless re-ingested). It is therefore kept opt-in / default false so<br>it never destroys an existing FinOpsHub cluster implicitly. Set true on a<br>NEW deployment to get infrastructure-level double encryption from creation. | `bool` | `false` | no |
+| adx\_hot\_cache\_days | Number of days for ADX hot cache | `number` | `31` | no |
+| adx\_sku\_capacity | ADX cluster node count (1 for dev, 2+ for prod) | `number` | `1` | no |
+| adx\_sku\_name | ADX cluster SKU name (e.g. Dev(No SLA)\_Standard\_D11\_v2 for dev, Standard\_D11\_v2 for prod) | `string` | `"Dev(No SLA)_Standard_D11_v2"` | no |
+| adx\_soft\_delete\_days | Number of days for ADX soft delete retention | `number` | `365` | no |
+| adx\_zones | Availability zones for the ADX cluster. If null, defaults to ["1","2","3"] for non-Dev SKUs and [] for Dev SKUs. | `list(string)` | `null` | no |
+| cost\_management\_exports\_principal\_id | Principal ID of the Azure Cost Management Exports Service Principal (null = no role assignment) | `string` | `null` | no |
+| enable\_data\_explorer | Deploy Azure Data Explorer cluster and databases | `bool` | `true` | no |
+| enable\_public\_access | Enable public network access on storage and ADF. WARNING: bypasses firewall perimeter. Use Private Endpoints in production. | `bool` | `false` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| export\_retention\_days | Number of days to retain raw exports in msexports container (0 = delete after processing) | `number` | `0` | no |
+| hub\_additional\_viewers | Extra Viewer principals on the Data Explorer Hub database (key = short<br>name, value = principal/object ID). Typically an application/managed<br>identity — e.g. Grafana's identity reading FinOps data.<br><br>NOTE: created with principal\_type = "App" (managed identities / service<br>principals). To grant an Entra GROUP or USER, this map isn't enough<br>(a Group would be created as App and rejected) — extend the module to a<br>per-entry principal\_type first. Ignored when enable\_data\_explorer = false. | `map(string)` | `{}` | no |
+| ingestion\_retention\_months | Number of months to retain ingested data in ingestion container | `number` | `13` | no |
+| name | Explicit module-level name override (escape hatch). If null, derived from naming convention via ../Naming. | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| storage\_replication\_type | Replication type for the storage account (LRS, ZRS) | `string` | `"LRS"` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | `null` | no |
+| tags | Tags to apply to all resources | `map(string)` | `{}` | no |
+| workload | Workload identifier — typically 'finops' for FinOpsHub deployments. | `string` | `"finops"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| adx\_cluster\_id | The ID of the ADX cluster |
+| adx\_cluster\_name | The name of the ADX cluster |
+| adx\_cluster\_uri | The URI of the ADX cluster |
+| adx\_ingestion\_uri | The data ingestion URI of the ADX cluster |
+| data\_factory\_id | The ID of the Data Factory |
+| data\_factory\_name | The name of the Data Factory |
+| data\_factory\_principal\_id | The principal ID of the Data Factory managed identity |
+| eventhub\_namespace\_id | The ID of the Event Hub Namespace |
+| hub\_additional\_viewer\_ids | Map of hub\_additional\_viewers key => Kusto database principal assignment ID (empty when none / ADX disabled). |
+| resource | The FinOps Hub storage account object (primary resource) |
+| storage\_account\_id | The ID of the FinOps Hub storage account |
+| storage\_account\_name | The name of the FinOps Hub storage account |
+<!-- END_TF_DOCS -->

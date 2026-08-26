@@ -158,3 +158,68 @@ inputs = {
 - **start_vm_on_connect** must be enabled on the host pool (`AvdHostPool.start_vm_on_connect = true`) for ramp-up to wake deallocated VMs.
 - **time_zone** must be a Windows time zone name (e.g. `"W. Europe Standard Time"`, `"Romance Standard Time"`). IANA zone names (e.g. `"Europe/Amsterdam"`) are rejected by the Azure API.
 - For **Personal** pools, only a subset of schedule fields are honored (no peak load balancing). A separate schedule shape for Personal autoscale (azurerm 4.20+ GA) is tracked for a future release.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_virtual_desktop_scaling_plan.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_desktop_scaling_plan) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| host\_pool\_associations | Map key => { hostpool\_id, scaling\_plan\_enabled } | <pre>map(object({<br>    hostpool_id          = string<br>    scaling_plan_enabled = optional(bool, true)<br>  }))</pre> | n/a | yes |
+| location | Must match the host pool region. | `string` | n/a | yes |
+| resource\_group\_name | n/a | `string` | n/a | yes |
+| schedules | Map of scaling plan schedules. For Pooled host pools:<br><br>- `days_of_week`                         - (Required) Set: Monday..Sunday<br>- `ramp_up_start_time`                   - (Required) "HH:MM"<br>- `ramp_up_load_balancing_algorithm`     - (Required) BreadthFirst \| DepthFirst<br>- `ramp_up_minimum_hosts_percent`        - (Optional) 0-100  (Azure default applies when omitted)<br>- `ramp_up_capacity_threshold_percent`   - (Optional) 1-100  (Azure default applies when omitted)<br>- `peak_start_time`                      - (Required) "HH:MM"<br>- `peak_load_balancing_algorithm`        - (Required) BreadthFirst \| DepthFirst<br>- `ramp_down_start_time`                 - (Required) "HH:MM"<br>- `ramp_down_load_balancing_algorithm`   - (Required) BreadthFirst \| DepthFirst<br>- `ramp_down_minimum_hosts_percent`      - (Required) 0-100<br>- `ramp_down_capacity_threshold_percent` - (Required) 1-100<br>- `ramp_down_force_logoff_users`         - (Required) bool<br>- `ramp_down_wait_time_minutes`          - (Required) minutes before forced logoff<br>- `ramp_down_notification_message`       - (Required) shown to users before logoff<br>- `ramp_down_stop_hosts_when`            - (Required) ZeroActiveSessions \| ZeroSessions<br>- `off_peak_start_time`                  - (Required) "HH:MM"<br>- `off_peak_load_balancing_algorithm`    - (Required) BreadthFirst \| DepthFirst | <pre>map(object({<br>    days_of_week                         = set(string)<br>    ramp_up_start_time                   = string<br>    ramp_up_load_balancing_algorithm     = string<br>    ramp_up_minimum_hosts_percent        = optional(number)<br>    ramp_up_capacity_threshold_percent   = optional(number)<br>    peak_start_time                      = string<br>    peak_load_balancing_algorithm        = string<br>    ramp_down_start_time                 = string<br>    ramp_down_load_balancing_algorithm   = string<br>    ramp_down_minimum_hosts_percent      = number<br>    ramp_down_capacity_threshold_percent = number<br>    ramp_down_force_logoff_users         = bool<br>    ramp_down_wait_time_minutes          = number<br>    ramp_down_notification_message       = string<br>    ramp_down_stop_hosts_when            = string<br>    off_peak_start_time                  = string<br>    off_peak_load_balancing_algorithm    = string<br>  }))</pre> | n/a | yes |
+| description | n/a | `string` | `null` | no |
+| environment | n/a | `string` | `null` | no |
+| exclusion\_tag | Tag name on session hosts to exclude from autoscale (e.g. 'excludeFromScaling'). | `string` | `null` | no |
+| friendly\_name | n/a | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the scaling plan. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit scaling plan name. If null, computed automatically. | `string` | `null` | no |
+| region\_code | n/a | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the scaling plan scope. Useful for AVD admin contributor visibility scenarios. Default principal\_type='Group'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "Group")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | n/a | `string` | `null` | no |
+| tags | ############################################################## TAGS ############################################################## F-7: nullable = false added (merge(null, ...) would panic). | `map(string)` | `{}` | no |
+| time\_zone | Windows time zone name (e.g. 'W. Europe Standard Time', 'Romance Standard Time'). IANA names are not accepted by the Azure API. | `string` | `"W. Europe Standard Time"` | no |
+| workload | Workload suffix (e.g. pooled). | `string` | `"pooled"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | Scaling plan resource ID |
+| lock\_id | Management lock ID (null if var.lock is null) |
+| name | Scaling plan name |
+| resource | Full scaling plan resource object |
+| role\_assignment\_ids | Map of role assignment logical name => role assignment ID |
+<!-- END_TF_DOCS -->

@@ -182,3 +182,73 @@ Callers passing `var.name` explicitly today are byte-for-byte compatible — no 
 `sensitive = true` (consequence of F-10: whole-object sensitive on peering variables). Downstream
 `dependency` blocks in Terragrunt that reference these outputs may require explicit
 `sensitive = true` handling.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_express_route_circuit.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/express_route_circuit) | resource |
+| [azurerm_express_route_circuit_peering.microsoft](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/express_route_circuit_peering) | resource |
+| [azurerm_express_route_circuit_peering.private](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/express_route_circuit_peering) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| bandwidth\_in\_mbps | Circuit bandwidth in Mbps. Must be one of the Azure-supported values: 50, 100, 200, 500, 1000, 2000, 5000, 10000.<br><br>Note: This module is scoped to the standard service-provider ER model. ExpressRouteDirect<br>(express\_route\_port\_id + bandwidth\_in\_gbps path) is OUT OF SCOPE — tracked as backlog enhancement. | `number` | n/a | yes |
+| location | Azure region for the ExpressRoute circuit | `string` | n/a | yes |
+| peering\_location | Peering location (e.g. Frankfurt, Amsterdam). Note: This module is scoped to the standard service-provider ER model. ExpressRouteDirect (express\_route\_port\_id + bandwidth\_in\_gbps path) is OUT OF SCOPE — tracked as backlog enhancement. | `string` | n/a | yes |
+| resource\_group\_name | Resource group name | `string` | n/a | yes |
+| service\_provider\_name | ExpressRoute service provider (e.g. DE-CIX, Equinix). Note: This module is scoped to the standard service-provider ER model. ExpressRouteDirect (express\_route\_port\_id + bandwidth\_in\_gbps path) is OUT OF SCOPE — tracked as backlog enhancement. | `string` | n/a | yes |
+| allow\_classic\_operations | Allow classic operations on the circuit | `bool` | `false` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Optional management lock (CanNotDelete or ReadOnly) | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| microsoft\_peering | Optional Microsoft Peering BGP config (for Office 365 / Azure PaaS reachability over ER).<br>Set to null to skip Microsoft Peering. Mirror shape of var.private\_peering plus<br>microsoft\_peering\_config sub-block with advertised\_public\_prefixes (the public IP<br>ranges your AS will advertise via the Microsoft Peering).<br><br>- `peer_asn` — On-premises BGP ASN.<br>- `primary_peer_address_prefix` — /30 subnet for the primary BGP session.<br>- `secondary_peer_address_prefix` — /30 subnet for the secondary BGP session.<br>- `vlan_id` — VLAN tag assigned by the provider (must differ from private\_peering.vlan\_id).<br>- `shared_key` — Optional MD5 BGP authentication key.<br>- `ipv4_enabled` — Enable IPv4 family (default true).<br>- `microsoft_peering_config.advertised_public_prefixes` — List of public IP prefixes to advertise.<br>- `microsoft_peering_config.advertised_communities` — Optional BGP community strings.<br>- `microsoft_peering_config.customer_asn` — Optional customer ASN for prefix ownership validation.<br>- `microsoft_peering_config.routing_registry_name` — Optional routing registry (e.g. ARIN, RIPE). | <pre>object({<br>    peer_asn                      = number<br>    primary_peer_address_prefix   = string<br>    secondary_peer_address_prefix = string<br>    vlan_id                       = number<br>    shared_key                    = optional(string)<br>    ipv4_enabled                  = optional(bool, true)<br>    microsoft_peering_config = object({<br>      advertised_public_prefixes = list(string)<br>      advertised_communities     = optional(list(string))<br>      customer_asn               = optional(number)<br>      routing_registry_name      = optional(string)<br>    })<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name. If null, computed from naming components. | `string` | `null` | no |
+| private\_peering | Azure Private Peering configuration. Set to null to skip peering creation.<br><br>- `peer_asn` — On-premises BGP ASN.<br>- `primary_peer_address_prefix` — /30 subnet for the primary BGP session.<br>- `secondary_peer_address_prefix` — /30 subnet for the secondary BGP session.<br>- `vlan_id` — VLAN tag assigned by the provider.<br>- `shared_key` — Optional MD5 BGP authentication key.<br>- `ipv4_enabled` — Enable IPv4 family (default true).<br><br>NOTE: AzurePrivatePeering can only be created once the circuit has been<br>provisioned by the service provider (serviceProviderProvisioningState =<br>"Provisioned"). Apply this module twice if needed:<br>  1. With private\_peering = null  → creates circuit, captures serviceKey<br>  2. Share serviceKey with provider; wait for provisioning<br>  3. With private\_peering = {...} → adds the peering | <pre>object({<br>    peer_asn                      = number<br>    primary_peer_address_prefix   = string<br>    secondary_peer_address_prefix = string<br>    vlan_id                       = number<br>    shared_key                    = optional(string)<br>    ipv4_enabled                  = optional(bool, true)<br>  })</pre> | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| sku\_family | SKU family (MeteredData or UnlimitedData) | `string` | `"MeteredData"` | no |
+| sku\_tier | SKU tier for the ExpressRoute circuit. Valid values: Basic, Standard, Premium, Local.<br><br>- Basic    — entry-level, limited route limits (preview in some regions)<br>- Standard — regional connectivity<br>- Premium  — global connectivity, higher route limits<br>- Local    — discounted local-only connectivity; REQUIRES sku\_family = "UnlimitedData"<br><br>Note: Local + MeteredData is rejected by the Azure API. | `string` | `"Standard"` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The ID of the ExpressRoute circuit |
+| microsoft\_peering\_id | ID of the Microsoft Peering, or empty string when not configured. |
+| name | The name of the ExpressRoute circuit |
+| private\_peering\_azure\_ports | MSEE port allocations from Microsoft (primary/secondary). Empty strings until the provider finishes physical port plumbing — useful as a readiness signal. |
+| private\_peering\_id | ID of the AzurePrivatePeering. Returns empty string when peering is not configured (phase 1) — Terragrunt strips null outputs from dependency objects, so empty string is used as the sentinel. |
+| resource | The complete ExpressRoute circuit resource object (sensitive because it contains service\_key) |
+| service\_key | Service Key (s-tag) — share with the provider to provision the circuit on their side |
+| service\_provider\_provisioning\_state | Provider-side provisioning state (NotProvisioned / Provisioning / Provisioned) |
+<!-- END_TF_DOCS -->

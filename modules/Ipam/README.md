@@ -147,3 +147,64 @@ inputs = {
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: slug naming, two-tier hierarchy wiring, BYO AVNM, both static-CIDR forms, and the validators (BYO id required, scope required, bad/self/three-tier parent, static-CIDR XOR). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_network_manager.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_manager) | resource |
+| [azurerm_network_manager_ipam_pool.child](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_manager_ipam_pool) | resource |
+| [azurerm_network_manager_ipam_pool.root](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_manager_ipam_pool) | resource |
+| [azurerm_network_manager_ipam_pool_static_cidr.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_manager_ipam_pool_static_cidr) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment (prod/nprd). | `string` | n/a | yes |
+| location | Azure region for the Network Manager and its IPAM pools (ForceNew on the pools). | `string` | n/a | yes |
+| region\_code | Region short code (e.g. 'gwc'). | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the Network Manager (used only when create\_network\_manager = true). | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym (e.g. 'con'). | `string` | n/a | yes |
+| create\_network\_manager | Create a dedicated Network Manager to host the IPAM pools. Set false to attach the pools to an existing AVNM (existing\_network\_manager\_id). | `bool` | `true` | no |
+| existing\_network\_manager\_id | Resource id of an existing Network Manager to attach the IPAM pools to. Required when create\_network\_manager = false. | `string` | `null` | no |
+| network\_manager\_description | Description of the Network Manager. | `string` | `"IPAM — centralised IP address management (AVNM)."` | no |
+| network\_manager\_name | Override for the Network Manager name. Null = derive from the Naming submodule (nm-{acr}-{env}-{region}-{workload}). | `string` | `null` | no |
+| network\_manager\_scope | Scope the Network Manager manages. Provide at least one management group id or subscription id when create\_network\_manager = true. Management-group scope requires Microsoft.Network registered at that MG. | <pre>object({<br>    management_group_ids = optional(list(string), [])<br>    subscription_ids     = optional(list(string), [])<br>  })</pre> | `{}` | no |
+| network\_manager\_scope\_accesses | Configuration deployment types allowed on the Network Manager. IPAM is available on any AVNM regardless of this list; keep it minimal. Allowed: Connectivity, SecurityAdmin, Routing. | `list(string)` | <pre>[<br>  "Connectivity"<br>]</pre> | no |
+| pools | IPAM pools keyed by a stable local key. Reference a parent pool via parent\_pool\_key to build the hierarchy (root + up to 7 layers). static\_cidrs reserves fixed ranges: set EITHER address\_prefixes OR number\_of\_ip\_addresses\_to\_allocate, not both. | <pre>map(object({<br>    name             = optional(string) # override; null = ipam-{key}-{acr}-{env}-{region}-{workload}<br>    display_name     = optional(string) # portal display name; null = pool key<br>    description      = optional(string)<br>    address_prefixes = list(string)                         # CIDR(s) owned by this pool (ForceNew)<br>    parent_pool_key  = optional(string)                     # key of the parent pool in this same map (hierarchy)<br>    static_cidrs = optional(map(object({                    # carve fixed sub-CIDRs out of the pool<br>      name                               = optional(string) # override; null = static CIDR key<br>      address_prefixes                   = optional(list(string))<br>      number_of_ip_addresses_to_allocate = optional(string) # power-of-2 count; auto-allocated from the pool<br>    })), {})<br>  }))</pre> | `{}` | no |
+| tags | Tags applied to the Network Manager and IPAM pools. | `map(string)` | `{}` | no |
+| workload | Workload/instance suffix for naming. | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ipam\_pool\_ids | Map of pool key => IPAM pool resource id (root and child pools merged). |
+| ipam\_pool\_names | Map of pool key => IPAM pool name. |
+| network\_manager\_id | Resource id of the Network Manager hosting the IPAM pools (created here or the existing one passed in). |
+| network\_manager\_name | Name of the Network Manager when created by this module (null when bringing your own). |
+| static\_cidr\_ids | Map of 'poolKey/cidrKey' => static CIDR resource id. |
+<!-- END_TF_DOCS -->

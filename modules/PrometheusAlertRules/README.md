@@ -178,3 +178,63 @@ Note: Resource names are semantically driven by group key and cluster name rathe
 | names | Map of rule group key => resource name |
 | rule_groups | Map of rule group key => full resource object |
 | lock_ids | Map of rule group key => management lock ID (empty map when var.lock is null) |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_alert_prometheus_rule_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_alert_prometheus_rule_group) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| action\_group\_ids | List of Action Group resource IDs to wire to every alert in this rule group. At least 1 required (Azure requires actions on alert rules). Maximum 5 (Azure limit). | `list(string)` | n/a | yes |
+| location | Azure region | `string` | n/a | yes |
+| monitor\_workspace\_id | ID of the Azure Monitor Workspace (Prometheus scope) | `string` | n/a | yes |
+| resource\_group\_name | Resource group for the alert rule groups | `string` | n/a | yes |
+| rule\_groups | Map of Prometheus alert rule groups. Key = group name suffix. Max 20 rules per group (Azure limit). severity must be 0..4. | <pre>map(object({<br>    interval = optional(string, "PT1M")<br>    enabled  = optional(bool, true)<br>    alerts = map(object({<br>      expression  = string<br>      for         = optional(string, "PT15M")<br>      severity    = optional(number, 3)<br>      enabled     = optional(bool, true)<br>      labels      = optional(map(string), {})<br>      annotations = optional(map(string), {})<br>      # M-5: per-alert alert_resolution override.<br>      alert_resolution = optional(object({<br>        auto_resolved   = optional(bool, true)<br>        time_to_resolve = optional(string, "PT15M")<br>      }), { auto_resolved = true, time_to_resolve = "PT15M" })<br>    }))<br>  }))</pre> | n/a | yes |
+| aks\_cluster\_id | ID of the AKS cluster. Required when aks\_cluster\_name is set; both must be null for AMW-only scope. | `string` | `null` | no |
+| aks\_cluster\_name | Name of the AKS cluster (used in alert rule group names and cluster\_name scope). Required when aks\_cluster\_id is set; both must be null for AMW-only scope. | `string` | `null` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on each alert rule group. Applies to all groups in var.rule\_groups. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Unused override placeholder (naming vars are optional — resource names are semantically derived from rule group keys and cluster name). Kept for house-convention metadata consistency. | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. api, mgm) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix | `string` | `"aks-alerts"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of rule group key to resource ID |
+| lock\_ids | Map of rule group key => management lock ID (empty map when var.lock is null) |
+| names | Map of rule group key to resource name |
+| rule\_groups | Map of alert rule group key => full resource object |
+<!-- END_TF_DOCS -->

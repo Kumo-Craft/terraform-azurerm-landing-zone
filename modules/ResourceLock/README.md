@@ -123,3 +123,44 @@ The canonical `ResourceGroup` module exposes a per-entry inline `lock` field. If
 |------|-------------|
 | ids | Map of lock key => lock ID |
 | resources | Map of lock key => complete lock resource object |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_management_lock.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/management_lock) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| locks | A map of management locks to create. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>- `scope`      - (Required) Azure resource ID to lock (RG or resource).<br>- `name`       - (Optional) Lock name. Defaults to "lock-<map-key>" when omitted.<br>- `lock_level` - (Optional) Lock level: "CanNotDelete" or "ReadOnly". Defaults to "CanNotDelete".<br>- `notes`      - (Optional) Lock description.<br><br>WARNING: CanNotDelete locks also block `terraform destroy`.<br>Set enable\_locks = false for maintenance operations. | <pre>map(object({<br>    scope      = string<br>    name       = optional(string)<br>    lock_level = optional(string, "CanNotDelete")<br>    notes      = optional(string, "Lock applied by Terragrunt — Azure Landing Zone")<br>  }))</pre> | n/a | yes |
+| enable\_locks | Set to false to disable all locks (e.g. for maintenance terraform destroy). | `bool` | `true` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of lock key => lock ID |
+| resources | Map of lock key => complete lock resource object |
+<!-- END_TF_DOCS -->

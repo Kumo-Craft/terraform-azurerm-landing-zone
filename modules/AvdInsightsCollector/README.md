@@ -110,3 +110,64 @@ module "avd_insights" {
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: naming, `kind = Windows`, Perf/Event streams, the 15+5 counter split, the 6 event logs, associations per host, name override, lock, counter override, and validators (LAW id, empty counters/logs, sampling frequency bounds). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_data_collection_rule.avd](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_data_collection_rule) | resource |
+| [azurerm_monitor_data_collection_rule_association.avd](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_data_collection_rule_association) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region for the DCR (must match the session hosts' region). | `string` | n/a | yes |
+| log\_analytics\_workspace\_id | Resource ID of the Log Analytics Workspace the AVD Insights data is shipped to (compose ../LogAnalyticsWorkspace). This module does NOT create a workspace. | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the DCR. | `string` | n/a | yes |
+| environment | Environment (e.g. prod, nprd). | `string` | `null` | no |
+| lock | Optional Resource Lock on the DCR.<br><br>Note: this module deliberately carries NO hardcoded lifecycle.prevent\_destroy<br>— a hardcoded guard has blocked legitimate destroys before (cf. Ampls). Use<br>this variable when you want a delete guard.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Explicit DCR name override (escape hatch). If null, derived via ../Naming (dcr-{acr}-{env}-{region}-{workload}-avdinsights). | `string` | `null` | no |
+| performance\_counters | Performance counters shipped to the Perf table (stream Microsoft-Perf).<br>Defaults to the 20 counters AVD Insights reads, at Microsoft's documented<br>sampling frequencies (two blocks because the frequencies differ):<br>  - 30s: 15 counters (disk queues, memory, processor, input delay, RemoteFX)<br>  - 60s: 5 counters (free space, disk sec/transfer, Terminal Services sessions)<br>Source: https://learn.microsoft.com/azure/virtual-desktop/insights-costs<br>Override to trim cost or add counters. | <pre>list(object({<br>    name                          = string<br>    sampling_frequency_in_seconds = number<br>    counter_specifiers            = list(string)<br>  }))</pre> | <pre>[<br>  {<br>    "counter_specifiers": [<br>      "\\LogicalDisk(C:)\\Avg. Disk Queue Length",<br>      "\\LogicalDisk(C:)\\Current Disk Queue Length",<br>      "\\Memory(*)\\Available Mbytes",<br>      "\\Memory(*)\\Page Faults/sec",<br>      "\\Memory(*)\\Pages/sec",<br>      "\\Memory(*)\\% Committed Bytes In Use",<br>      "\\PhysicalDisk(*)\\Avg. Disk Queue Length",<br>      "\\PhysicalDisk(*)\\Avg. Disk sec/Read",<br>      "\\PhysicalDisk(*)\\Avg. Disk sec/Transfer",<br>      "\\PhysicalDisk(*)\\Avg. Disk sec/Write",<br>      "\\Processor Information(_Total)\\% Processor Time",<br>      "\\User Input Delay per Process(*)\\Max Input Delay",<br>      "\\User Input Delay per Session(*)\\Max Input Delay",<br>      "\\RemoteFX Network(*)\\Current TCP RTT",<br>      "\\RemoteFX Network(*)\\Current UDP Bandwidth"<br>    ],<br>    "name": "avd-perf-30s",<br>    "sampling_frequency_in_seconds": 30<br>  },<br>  {<br>    "counter_specifiers": [<br>      "\\LogicalDisk(C:)\\% Free Space",<br>      "\\LogicalDisk(C:)\\Avg. Disk sec/Transfer",<br>      "\\Terminal Services(*)\\Active Sessions",<br>      "\\Terminal Services(*)\\Inactive Sessions",<br>      "\\Terminal Services(*)\\Total Sessions"<br>    ],<br>    "name": "avd-perf-60s",<br>    "sampling_frequency_in_seconds": 60<br>  }<br>]</pre> | no |
+| region\_code | Region code (e.g. gwc, weu). | `string` | `null` | no |
+| session\_host\_ids | Resource IDs of the AVD session host VMs to associate with the DCR.<br><br>Defaults to [] on purpose: the DCR must be creatable BEFORE the session<br>hosts exist (the host pool build consumes the workspace/DCR), so the usual<br>flow is — apply once with [] to create the DCR, then a second apply once<br>the hosts are up to create the associations. Passing unknown-at-plan host<br>ids here would otherwise force a for\_each on unknown keys. | `list(string)` | `[]` | no |
+| subscription\_acronym | Subscription acronym (e.g. avd, shc, mgm). | `string` | `null` | no |
+| tags | Tags to apply to the DCR. | `map(string)` | `{}` | no |
+| windows\_event\_logs | Windows event logs shipped to the Event table (stream Microsoft-Event).<br>Defaults to the 6 logs AVD Insights reads.<br><br>LEVEL CAVEAT: Microsoft documents the log NAMES but not the workbook's exact<br>levels — the levels below are a deliberate cost trade-off, hence this override:<br>  - Application / System        -> Critical+Error+Warning only (Level 1,2,3).<br>    High volume; Information carries no diagnostic value for AVD here.<br>  - FSLogix x2 / TerminalServices x2 -> + Information (Level 1,2,3,4,0).<br>    Low volume, and exactly where profile/session failures are diagnosed.<br>Windows levels: 0=LogAlways, 1=Critical, 2=Error, 3=Warning, 4=Information. | <pre>list(object({<br>    name           = string<br>    x_path_queries = list(string)<br>  }))</pre> | <pre>[<br>  {<br>    "name": "avd-eventlogs",<br>    "x_path_queries": [<br>      "Application!*[System[(Level=1 or Level=2 or Level=3)]]",<br>      "System!*[System[(Level=1 or Level=2 or Level=3)]]",<br>      "Microsoft-Windows-TerminalServices-RemoteConnectionManager/Admin!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]",<br>      "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]",<br>      "Microsoft-FSLogix-Apps/Operational!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]",<br>      "Microsoft-FSLogix-Apps/Admin!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]"<br>    ]<br>  }<br>]</pre> | no |
+| workload | Workload suffix in the DCR/DCRA names (the -avdinsights component is appended after it). | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| association\_ids | Map of session host resource ID => DCR association ID (empty until session\_host\_ids is populated). |
+| id | Resource ID of the AVD Insights Data Collection Rule. |
+| lock\_ids | Map of management lock IDs (empty when var.lock is null). |
+| name | Name of the AVD Insights Data Collection Rule. |
+<!-- END_TF_DOCS -->

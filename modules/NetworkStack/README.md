@@ -371,3 +371,90 @@ Repeat steps 2-3 for every subnet entry in the state. The surrounding resources
 - **Flow logs** — typically lives cross-sub (storage in connectivity hub) +
   optional traffic analytics integration. Use the `FlowLogs` module separately.
 - **DNS resolver / Private DNS zones** — connectivity sub concerns, not spoke.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| hub\_peering | ../VNetPeering | n/a |
+| naming | ../Naming | n/a |
+| network\_watcher | ../NetworkWatcher | n/a |
+| nsg | ../NSG | n/a |
+| route\_table | ../RouteTable | n/a |
+| subnet\_route\_table | ../RouteTable | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azapi_resource.subnet](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) | resource |
+| [azurerm_virtual_network.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | n/a | `string` | n/a | yes |
+| location | ############################################################## REQUIRED ############################################################## | `string` | n/a | yes |
+| region\_code | n/a | `string` | n/a | yes |
+| resource\_group\_name | Existing resource group name. NetworkStack v0.2.8 no longer creates the RG — caller must provide an existing one (create via ../ResourceGroup in your root module if needed). | `string` | n/a | yes |
+| subscription\_acronym | ############################################################## NAMING Defaults follow the {prefix}-{acr}-{env}-{region\_code}-{suffix} pattern. Each component name can be overridden explicitly. ############################################################## | `string` | n/a | yes |
+| vnet\_address\_space | vnet CIDR block(s). | `list(string)` | n/a | yes |
+| bgp\_route\_propagation\_enabled | Allow Virtual Network Gateway BGP routes to propagate. False (default) ensures UDRs win. | `bool` | `false` | no |
+| create\_network\_watcher | Create a Network Watcher in the RG. Set false if one already exists in this region of this subscription (NW is regional, AzureNetworkWatcherRG is the historical default). | `bool` | `true` | no |
+| create\_route\_table | Create a route table and attach it to subnets that opt in (subnets[].attach\_route\_table=true). | `bool` | `true` | no |
+| ddos\_protection\_plan\_id | DDoS Standard plan ID to associate. Null = no DDoS Standard (basic free tier only). | `string` | `null` | no |
+| default\_route\_next\_hop\_ip | IP address for the default route next hop (typically the NVA ILB front-end). Null = no default route created. | `string` | `null` | no |
+| default\_route\_next\_hop\_type | Next hop type for the default 0.0.0.0/0 route. | `string` | `"VirtualAppliance"` | no |
+| dns\_servers | Custom DNS servers. Empty/null = Azure-provided DNS. For hub-and-spoke with NVA DNS proxy or Azure DNS Private Resolver, set this to the proxy/inbound endpoint IP. | `list(string)` | `null` | no |
+| encryption\_enforcement | vnet-level encryption (preview/limited regions). 'AllowUnencrypted' (default) or 'DropUnencrypted' to enforce encrypted-only east-west traffic. Null = no encryption block (Azure default). | `string` | `null` | no |
+| extra\_routes | Additional UDRs beyond the default route. Map key = route name suffix. | <pre>map(object({<br>    address_prefix         = string<br>    next_hop_type          = string<br>    next_hop_in_ip_address = optional(string)<br>  }))</pre> | `{}` | no |
+| flow\_timeout\_in\_minutes | Connection idle timeout (4-30 min). Useful when long-running connections must survive Azure's default 4 min idle timeout. | `number` | `null` | no |
+| hub\_peering | Optional spoke-to-hub VNet peering created inside this module. Default null<br>= no peering (caller must declare it separately, e.g. via the VNetPeering<br>module). When set, NetworkStack creates the spoke->hub peering inline so<br>the network deployment is self-contained.<br><br>The reverse hub->spoke peering still lives in the connectivity sub<br>(aggregator pattern: 1 hub VNet ↔ N spokes). Both sides must be applied<br>for the peering to reach 'Connected' state.<br><br>Cross-sub peering: the module's deployer SP needs Network Contributor on<br>the hub VNet's RG. allow\_forwarded\_traffic = true is typical for<br>hub-and-spoke with NVA (Palo) so the hub can forward spoke traffic. | <pre>object({<br>    name                      = string<br>    remote_virtual_network_id = string<br>    allow_forwarded_traffic   = optional(bool, true)<br>    allow_gateway_transit     = optional(bool, false)<br>    use_remote_gateways       = optional(bool, false)<br>  })</pre> | `null` | no |
+| network\_watcher\_name | Override Network Watcher name. Default: nw-{prefix}-{workload}. | `string` | `null` | no |
+| route\_table\_name | Override route table name. Default: rt-{prefix}-{workload}. | `string` | `null` | no |
+| subnets | Map of subnets. Map key is the short subnet identifier used in NSG / subnet<br>naming when no explicit `name` is supplied.<br><br>- `cidr`                              - (Required) Subnet CIDR.<br>- `name`                              - (Optional) Override subnet name. Default: snet-{prefix}-{key}. Use 'AzureBastionSubnet', 'GatewaySubnet', 'AzureFirewallSubnet' as appropriate.<br>- `create_nsg`                        - (Optional, default true) Create + attach an NSG. Set false for GatewaySubnet (Azure forbids). For AzureBastionSubnet you may need a custom NSG with specific rules.<br>- `nsg_rules`                         - (Optional) Inline NSG rules (see security\_rule schema). Empty = relies on Azure default rules.<br>- `attach_route_table`                - (Optional, default true) Attach the module's shared route table. Set false for GatewaySubnet (Azure forbids), and false when using per-subnet `routes` (mutually exclusive).<br>- `routes`                            - (Optional) Per-subnet dedicated route table. Map of {address\_prefix, next\_hop\_type, next\_hop\_in\_ip\_address?} keyed by route name. When set, the module creates a DEDICATED route table `rt-{prefix}-{key}` holding ONLY these routes (NO default 0.0.0.0/0) and attaches it to this subnet. Use for subnets where a default route is forbidden but specific routes are allowed — e.g. an Entra Domain Services subnet. Requires `attach_route_table = false` (exclusive with the shared route table).<br>- `delegation`                        - (Optional) {name, service\_name} for managed services (AKS apiserver, NetApp, App Service, ContainerInstance, etc.).<br>- `service_endpoints`                 - (Optional) List of service endpoints (e.g. ["Microsoft.Storage", "Microsoft.KeyVault"]).<br>- `private_endpoint_network_policies` - (Optional, default "Enabled") Set "Disabled" for subnets hosting Private Endpoints if you don't want NSG to apply to PE NICs (legacy behavior).<br>- `default_outbound_access_enabled`   - (Optional, default false) Microsoft retires default outbound access in Sept 2025. Keep false to be future-proof; use NAT Gateway / NVA for explicit egress.<br>- `nat_gateway_id`                     - (Optional) Resource ID of a NAT Gateway to associate with this subnet for explicit outbound (SNAT). Pairs with `default_outbound_access_enabled = false`. Azure forbids a NAT Gateway on GatewaySubnet / AzureFirewallSubnet. | <pre>map(object({<br>    cidr               = string<br>    name               = optional(string)<br>    create_nsg         = optional(bool, true)<br>    attach_route_table = optional(bool, true)<br>    routes = optional(map(object({<br>      address_prefix         = string<br>      next_hop_type          = string<br>      next_hop_in_ip_address = optional(string)<br>    })))<br>    nsg_rules = optional(list(object({<br>      name                                       = string<br>      priority                                   = number<br>      direction                                  = string<br>      access                                     = string<br>      protocol                                   = string<br>      source_port_range                          = optional(string)<br>      destination_port_range                     = optional(string)<br>      source_address_prefix                      = optional(string)<br>      destination_address_prefix                 = optional(string)<br>      source_port_ranges                         = optional(list(string))<br>      destination_port_ranges                    = optional(list(string))<br>      source_address_prefixes                    = optional(list(string))<br>      destination_address_prefixes               = optional(list(string))<br>      source_application_security_group_ids      = optional(list(string))<br>      destination_application_security_group_ids = optional(list(string))<br>      description                                = optional(string)<br>    })), [])<br>    delegation = optional(object({<br>      name         = string<br>      service_name = string<br>    }))<br>    service_endpoints                 = optional(list(string), [])<br>    private_endpoint_network_policies = optional(string, "Enabled")<br>    default_outbound_access_enabled   = optional(bool, false)<br>    nat_gateway_id                    = optional(string)<br>  }))</pre> | `{}` | no |
+| tags | Tags applied to all resources created by the module (RG, NW, vnet, RT, NSGs, subnets). | `map(string)` | `{}` | no |
+| vnet\_name | Override vnet name. Default: vnet-{subscription\_acronym}-{environment}-{region\_code}-{workload} via ../Naming. Set this to use a legacy / externally-managed name. | `string` | `null` | no |
+| workload | Workload suffix for vnet name (e.g. spoke, hub, nva, avd, aks). | `string` | `"spoke"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| hub\_peering\_id | Resource ID of the spoke->hub peering, or null when hub\_peering not set. |
+| network\_watcher\_id | Network Watcher ID (null if create\_network\_watcher=false). |
+| network\_watcher\_name | Network Watcher name (null if create\_network\_watcher=false). |
+| nsg\_ids | Map of subnet key => NSG resource ID (only entries for subnets with create\_nsg=true). |
+| nsg\_names | Map of subnet key => NSG name. |
+| resource\_group\_name | Name of the network resource group (caller-provided passthrough). |
+| route\_table\_id | Route table ID (null if create\_route\_table=false). |
+| route\_table\_name | Route table name (null if create\_route\_table=false). |
+| subnet\_ids | Map of subnet key => subnet resource ID. |
+| subnet\_names | Map of subnet key => subnet name (resolved from override or generated). |
+| vnet\_address\_space | Virtual Network address space(s). |
+| vnet\_id | Virtual Network ID. |
+| vnet\_name | Virtual Network name. |
+| vnet\_resource | Full vnet resource object (for advanced consumption). |
+<!-- END_TF_DOCS -->

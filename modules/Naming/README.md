@@ -188,3 +188,49 @@ Plan-time only, no Azure credentials or mocks required (the module creates no `a
 
 - Module: [`Azure/naming/azurerm`](https://registry.terraform.io/modules/Azure/naming/azurerm/0.4.3) v0.4.3
 - Source: <https://github.com/Azure/terraform-azurerm-naming>
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+
+## Providers
+
+No providers.
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| this | Azure/naming/azurerm | 0.4.3 |
+
+## Resources
+
+No resources.
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment for naming convention (e.g. prod, nprd). Automatically injected by root.hcl. | `string` | n/a | yes |
+| region\_code | Region code for naming convention (e.g. gwc, weu). Automatically injected by root.hcl. | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, con, idn, sec, shc). | `string` | n/a | yes |
+| workload | Workload identifier. Appended last in the suffix so a name reads {type}-{acr}-{env}-{region}-{workload}. | `string` | n/a | yes |
+| extra\_suffix | Extra suffix segments appended AFTER `workload`. Useful when you need an instance index or a sub-component qualifier (e.g. ["01"], ["primary"]). | `list(string)` | `[]` | no |
+| prefix | Extra segments prepended BEFORE the upstream type prefix. Azure recommends suffixing rather than prefixing — leave empty unless you have a hard requirement. | `list(string)` | `[]` | no |
+| unique\_include\_numbers | Allow digits in the random unique segment. Only relevant when unique\_length > 0. | `bool` | `true` | no |
+| unique\_length | Length of the random unique segment the upstream module appends. Defaults to 0 (deterministic names — same inputs always produce the same name). Set > 0 if you need collision resistance across deployments. | `number` | `0` | no |
+| unique\_seed | Seed used when unique\_length > 0. If null, the seed defaults to the composed suffix ({acr}-{env}-{region}-{workload}) so the random segment stays stable across applies for the same inputs. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| result | All per-resource-type naming outputs from Azure/naming/azurerm. Access as result.<type>.name (e.g. result.key\_vault.name, result.resource\_group.name, result.storage\_account.name\_unique). |
+| suffix | The composed suffix list passed to the upstream module: [subscription\_acronym, environment, region\_code, workload, ...extra\_suffix]. |
+| unique\_seed | The effective unique\_seed used by the upstream module (input override, or the joined suffix when null). |
+<!-- END_TF_DOCS -->

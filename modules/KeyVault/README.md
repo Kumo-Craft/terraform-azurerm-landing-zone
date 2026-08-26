@@ -130,3 +130,76 @@ inputs = {
 | uri | **DEPRECATED** — alias for `vault_uri`. Will be removed in a future major version |
 | tenant_id | The Key Vault tenant ID |
 | resource | Curated Key Vault attributes (`id`, `name`, `vault_uri`, `tenant_id`, `location`, `resource_group_name`). Explicit list — omits the provider-deprecated `contact` block a raw resource-object output would surface. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| deployer\_rbac | ../RoleAssignment | n/a |
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| role\_assignments | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_key_vault.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region where the Key Vault will be deployed | `string` | n/a | yes |
+| resource\_group\_name | Name of the resource group | `string` | n/a | yes |
+| assign\_rbac\_to\_current\_user | Automatically assign `Key Vault Administrator` to the current deployer (the identity<br>running `terraform apply`).<br><br>**Default: false.** The recommended Azure-native pattern for a Landing Zone is to grant<br>the Terraform service principal `Key Vault Administrator` inherited from the Management<br>Group (or Subscription) scope ONCE, so it applies to every Key Vault deployed under that<br>hierarchy without per-KV state pollution. See README "Prerequisites" section.<br><br>Set to `true` only when:<br>- The deployer cannot be granted inherited MG/Sub-level RBAC (least-privilege policy), AND<br>- You need the deployer to manage child resources (keys, secrets, certs) in the same plan.<br><br>Trade-off when `true`: every KV deployed by this module records an explicit role<br>assignment for the deployer identity in state — auditability cost, and that identity<br>remains admin on the KV permanently unless explicitly revoked. | `bool` | `false` | no |
+| enable\_rbac | Enable RBAC authorization (recommended over access policies) | `bool` | `true` | no |
+| enabled\_for\_deployment | Enable VMs to retrieve certificates stored as secrets | `bool` | `false` | no |
+| enabled\_for\_disk\_encryption | Enable Azure Disk Encryption to retrieve secrets and unwrap keys | `bool` | `false` | no |
+| enabled\_for\_template\_deployment | Enable ARM templates to retrieve secrets | `bool` | `false` | no |
+| environment | Environment for naming convention (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Controls the Resource Lock configuration for this resource.<br><br>- `kind` - (Required) The type of lock. Possible values are "CanNotDelete" and "ReadOnly".<br>- `name` - (Optional) The name of the lock. If not specified, generated from the kind value. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit Key Vault name (3-24 chars). If null, computed from naming components. | `string` | `null` | no |
+| network\_acls | Network ACLs configuration for Key Vault firewall | <pre>object({<br>    default_action = string<br>    bypass         = string<br>    ip_rules       = optional(list(string), [])<br>    subnet_ids     = optional(list(string), [])<br>  })</pre> | `null` | no |
+| public\_network\_access\_enabled | Enable public network access (disable in production) | `bool` | `false` | no |
+| purge\_protection\_enabled | Enable purge protection (IRREVERSIBLE once enabled) | `bool` | `true` | no |
+| region\_code | Region code for naming convention (e.g. gwc, weu) | `string` | `null` | no |
+| role\_assignments | A map of role assignments to create on this Key Vault. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>- `role_definition_id_or_name`             - (Required) The ID or name of the role definition.<br>- `principal_id`                           - (Required) The ID of the principal to assign the role to.<br>- `principal_type`                         - (Optional) The type of principal. Values: User, Group, ServicePrincipal.<br>- `condition`                              - (Optional) ABAC condition for the role assignment.<br>- `condition_version`                      - (Optional) Condition version ("1.0" or "2.0").<br>- `description`                            - (Optional) Description of the role assignment.<br>- `skip_service_principal_aad_check`       - (Optional) Skip AAD check for the service principal.<br>- `delegated_managed_identity_resource_id` - (Optional) Delegated managed identity for cross-tenant scenarios. | <pre>map(object({<br>    role_definition_id_or_name             = string<br>    principal_id                           = string<br>    principal_type                         = optional(string)<br>    condition                              = optional(string)<br>    condition_version                      = optional(string)<br>    description                            = optional(string)<br>    skip_service_principal_aad_check       = optional(bool, false)<br>    delegated_managed_identity_resource_id = optional(string)<br>  }))</pre> | `{}` | no |
+| sku\_name | SKU name: 'standard' or 'premium' (HSM-backed) | `string` | `"premium"` | no |
+| soft\_delete\_retention\_days | Number of days to retain soft-deleted Key Vault (7-90) | `number` | `90` | no |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, con, api) | `string` | `null` | no |
+| tags | Tags to apply to the Key Vault | `map(string)` | `{}` | no |
+| tenant\_id | Azure AD tenant ID for the Key Vault (auto-detected if null) | `string` | `null` | no |
+| workload | Workload name for naming convention. Keep short (max 24 chars total name). | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The Key Vault resource ID |
+| name | The Key Vault name |
+| resource | Curated Key Vault attributes for downstream composition/inspection. Explicit field list (not the raw resource object) to avoid surfacing the provider-deprecated `contact` block — moved to the azurerm\_key\_vault\_certificate\_contacts resource. Same pattern as FlowLogs #10939. |
+| tenant\_id | The Key Vault tenant ID |
+| uri | DEPRECATED — use `vault_uri` instead. Kept for backwards compatibility with existing callers; will be removed in a future major version. |
+| vault\_uri | The Key Vault URI (e.g., https://kv-name.vault.azure.net/). Mirrors azurerm\_key\_vault.vault\_uri — preferred over the legacy `uri` output. |
+<!-- END_TF_DOCS -->

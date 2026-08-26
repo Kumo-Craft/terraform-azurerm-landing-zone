@@ -116,3 +116,65 @@ The default (`TrustedLaunchSupported`) means a VM created from this image inheri
 |---|---|
 | terraform | >= 1.12.0 |
 | azurerm | ~> 4.0 |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_shared_image.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/shared_image) | resource |
+| [azurerm_shared_image_gallery.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/shared_image_gallery) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | ############################################################## REQUIRED ############################################################## | `string` | n/a | yes |
+| resource\_group\_name | n/a | `string` | n/a | yes |
+| architecture | CPU architecture supported by the image. | `string` | `"x64"` | no |
+| environment | n/a | `string` | `null` | no |
+| gallery\_description | Optional description for the Compute Gallery. | `string` | `null` | no |
+| gallery\_name | Explicit Compute Gallery name override (escape hatch). If set, bypasses ../Naming. If null, the name is derived from the convention via ../Naming (result.shared\_image\_gallery.name). Gallery names allow letters, digits, '.', '\_' — NO hyphens. | `string` | `null` | no |
+| hyper\_v\_generation | Hyper-V generation. V2 is required for Trusted Launch / Confidential VM and recommended for Win11 + AVD. | `string` | `"V2"` | no |
+| image\_definition\_name | Name of the image definition to create in the gallery (e.g. win11-avd-m365-dev). Set to null to create the gallery only (no image definition). | `string` | `null` | no |
+| image\_description | Optional description for the image definition. | `string` | `null` | no |
+| image\_identifier | The image definition identifier (publisher/offer/sku). This triple must be unique within the gallery and is immutable. | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>  })</pre> | <pre>{<br>  "offer": "win11-avd-m365",<br>  "publisher": "POST",<br>  "sku": "dev"<br>}</pre> | no |
+| os\_type | OS type of the image definition. | `string` | `"Windows"` | no |
+| purchase\_plan | Optional marketplace purchase plan for the image definition. Required when the image is derived from a paid/3rd-party marketplace offer that carries a plan (e.g. the office-365 M365 AVD image). Leave null for first-party / custom images. | <pre>object({<br>    name      = string<br>    publisher = optional(string)<br>    product   = optional(string)<br>  })</pre> | `null` | no |
+| region\_code | n/a | `string` | `null` | no |
+| security\_type | Security type of the image definition. Maps to exactly one azurerm flag:<br>  - "Standard"                -> none (legacy Gen2 / Gen1)<br>  - "TrustedLaunchSupported"  -> trusted\_launch\_supported  (image can be used for BOTH Trusted Launch and standard Gen2 VMs) [default]<br>  - "TrustedLaunch"           -> trusted\_launch\_enabled    (image REQUIRES Trusted Launch)<br>  - "ConfidentialVmSupported" -> confidential\_vm\_supported<br>  - "ConfidentialVm"          -> confidential\_vm\_enabled<br>Default matches AVD session hosts built with Trusted Launch (secure\_boot + vTPM inherited from the definition). | `string` | `"TrustedLaunchSupported"` | no |
+| subscription\_acronym | n/a | `string` | `null` | no |
+| tags | Tags applied to the gallery and image definition. | `map(string)` | `{}` | no |
+| workload | Workload suffix for the gallery name (e.g. avd). | `string` | `"avd"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| gallery\_id | Resource ID of the Compute Gallery. |
+| gallery\_name | Name of the Compute Gallery. |
+| gallery\_unique\_name | The globally unique name of the Compute Gallery (used for cross-tenant / community sharing). |
+| image\_definition\_id | Resource ID of the image definition, or null when none was created (image\_definition\_name = null). |
+| image\_definition\_name | Name of the image definition, or null when none was created. |
+<!-- END_TF_DOCS -->

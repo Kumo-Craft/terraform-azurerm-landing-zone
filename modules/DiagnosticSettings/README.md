@@ -109,3 +109,43 @@ expanded into individual `enabled_log` blocks under the hood.
 |------|-------------|
 | ids | Map of key => Diagnostic Setting ID |
 | resources | Map of key => complete Diagnostic Setting object |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_diagnostic_setting.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_diagnostic_setting) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| diagnostic\_settings | A map of Diagnostic Settings to create. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>- `name`                                     - (Required) Diagnostic setting name.<br>- `target_resource_id`                       - (Required) Target Azure resource ID.<br>- `logs`                                     - (Optional) Per-category log names (e.g. ["kube-audit", "kube-apiserver"]). Defaults to [].<br>- `log_groups`                               - (Optional) Category-group names (e.g. ["allLogs", "audit"]). Required for AKS audit-log capture and for resources whose categories evolve. Defaults to [].<br>- `metrics`                                  - (Optional) Metric categories to enable (typically ["AllMetrics"]). Defaults to [].<br>- `log_analytics_workspace_id`               - (Optional) Log Analytics Workspace ID.<br>- `log_analytics_destination_type`           - (Optional) Either "Dedicated" (resource-specific tables, RECOMMENDED for new deployments per MS Learn CAF) or "AzureDiagnostics" (legacy shared table — for backward compatibility only). Default null = provider-managed.<br>- `storage_account_id`                       - (Optional) Storage Account ID for archival.<br>- `event_hub_authorization_rule_id`          - (Optional) Event Hub authorization rule ID.<br>- `event_hub_name`                           - (Optional) Event Hub name.<br>- `marketplace_partner_resource_id`          - (Optional) Marketplace partner resource ID. | <pre>map(object({<br>    name                            = string<br>    target_resource_id              = string<br>    logs                            = optional(list(string), [])<br>    log_groups                      = optional(list(string), [])<br>    metrics                         = optional(list(string), [])<br>    log_analytics_workspace_id      = optional(string)<br>    log_analytics_destination_type  = optional(string) # Either 'Dedicated' (resource-specific tables, RECOMMENDED for new deployments per MS Learn CAF) or 'AzureDiagnostics' (legacy shared table — for backward compatibility only). Default null = provider-managed.<br>    storage_account_id              = optional(string)<br>    event_hub_authorization_rule_id = optional(string)<br>    event_hub_name                  = optional(string)<br>    marketplace_partner_resource_id = optional(string)<br>  }))</pre> | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of key => Diagnostic Setting ID |
+| resources | Map of key => complete Diagnostic Setting resource object |
+<!-- END_TF_DOCS -->

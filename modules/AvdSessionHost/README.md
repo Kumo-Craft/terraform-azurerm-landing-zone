@@ -259,3 +259,94 @@ source_image_id = "/subscriptions/.../resourceGroups/rg-avd-shared/providers/Mic
 | terraform | >= 1.12.0 |
 | azurerm | ~> 4.0 |
 | time | >= 0.9.0 |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_network_interface.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_virtual_machine_extension.avd_dsc](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_virtual_machine_extension.entra_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_virtual_machine_extension.fslogix](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_windows_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/windows_virtual_machine) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/key_vault_secret) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| admin\_password\_kv\_id | Key Vault ID holding the local admin password secret. | `string` | n/a | yes |
+| fslogix\_vhd\_location | SMB UNC path to FSLogix profiles share (e.g. \\\\<sa>.file.core.windows.net\\profiles). | `string` | n/a | yes |
+| hostpool\_name | Host pool name to register the session host with (passed to AVD DSC). | `string` | n/a | yes |
+| hostpool\_registration\_token | Registration token from azurerm\_virtual\_desktop\_host\_pool\_registration\_info. | `string` | n/a | yes |
+| location | ############################################################## REQUIRED ############################################################## | `string` | n/a | yes |
+| resource\_group\_name | n/a | `string` | n/a | yes |
+| subnet\_id | n/a | `string` | n/a | yes |
+| accelerated\_networking\_enabled | Enable Accelerated Networking on the session host NICs. Most ≥ D4s\_v5 sizes support it; required for production AVD performance. Set to false only for VM sizes that do not support SR-IOV. | `bool` | `true` | no |
+| admin\_password\_secret\_name | Name of the Key Vault secret holding the local admin password. | `string` | `"sh-local-admin-password"` | no |
+| admin\_username | Local admin username (for break-glass access). | `string` | `"azureadmin"` | no |
+| availability\_zones | Zones to spread VMs across (round-robin). Empty = no zone placement. | `list(string)` | <pre>[<br>  "1",<br>  "2",<br>  "3"<br>]</pre> | no |
+| avd\_dsc\_artifact\_url | URL of the AVD DSC Configuration.zip (Azure-hosted artifact). | `string` | `"https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration_1.0.02990.697.zip"` | no |
+| bypass\_platform\_safety\_checks\_on\_user\_schedule | When patch\_mode = AutomaticByPlatform, set true to defer to a user-defined maintenance configuration (Update Manager) instead of platform-managed safety checks. | `bool` | `true` | no |
+| computer\_name\_prefix | Windows computer name prefix (≤ 12 chars; 2 digits appended). Lowercase alphanumeric. | `string` | `null` | no |
+| enable\_trusted\_launch | Enable Trusted Launch (vTPM + Secure Boot). Recommended. | `bool` | `true` | no |
+| encryption\_at\_host\_enabled | Enable host-level encryption (additional layer over disk SSE). CAF baseline = true. Requires Az.Compute feature 'EncryptionAtHost' registered + VM SKU support (most modern Dsv3+/Esv3+ SKUs support it; check the SKU table). Setting this to true is Azure-immutable post-VM-create — a flip from false to true on an existing VM requires destroy+recreate (state surgery required, NOT done by Terraform automatically). | `bool` | `true` | no |
+| environment | n/a | `string` | `null` | no |
+| fslogix\_profile\_size\_mb | FSLogix container max size in MB. | `number` | `30000` | no |
+| hotpatching\_enabled | Enable hotpatching where supported (Win11 24H2+ multi-session, Server 2022 Datacenter Azure Edition). Reduces reboots required for security patches. | `bool` | `false` | no |
+| image | Marketplace image. Default: Win11 24H2 AVD multi-session (FSLogix pre-installed). | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>    version   = optional(string, "latest")<br>  })</pre> | <pre>{<br>  "offer": "windows-11",<br>  "publisher": "microsoftwindowsdesktop",<br>  "sku": "win11-24h2-avd",<br>  "version": "latest"<br>}</pre> | no |
+| image\_plan | Marketplace plan for images that require purchase terms (e.g. office-365/win11-25h2-avd-m365). Leave null for first-party images (windows-11/win11-*-avd) that need no plan. Terms must be accepted once: `az vm image terms accept`. Ignored when `source_image_id` is set. | <pre>object({<br>    name      = string<br>    publisher = string<br>    product   = string<br>  })</pre> | `null` | no |
+| license\_type | Azure Hybrid Benefit license type. For AVD multi-session (Windows Client),<br>set "Windows\_Client" to consume the AHB / M365 entitlement and avoid<br>paying the full Windows VM compute price. For Windows Server SKUs, use<br>"Windows\_Server" or "None".<br>Allowed: "Windows\_Client", "Windows\_Server", "None". | `string` | `"Windows_Client"` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) applied to each session host VM. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit VM base name override (escape hatch). If set, bypasses ../Naming. If null, uses the canonical convention via ../Naming submodule. | `string` | `null` | no |
+| os\_disk | n/a | <pre>object({<br>    storage_account_type = optional(string, "Premium_LRS")<br>    caching              = optional(string, "ReadWrite")<br>    disk_size_gb         = optional(number, 128)<br>    ephemeral            = optional(bool, true) # D4s_v5 has 150 GiB temp — fits 128 GiB ephemeral<br>  })</pre> | `{}` | no |
+| patch\_mode | Patch orchestration mode. AutomaticByPlatform aligns with Azure Update<br>Manager and is the modern Microsoft recommendation for AVD; pair with<br>bypass\_platform\_safety\_checks\_on\_user\_schedule = true and a maintenance<br>configuration if you orchestrate patching from outside the VM.<br>Allowed: "Manual", "AutomaticByOS", "AutomaticByPlatform". | `string` | `"AutomaticByPlatform"` | no |
+| region\_code | n/a | `string` | `null` | no |
+| role\_assignments | Map of role assignments to apply at each VM scope. Common AVD roles: 'Virtual Machine User Login' / 'Virtual Machine Administrator Login' for AAD-joined hosts. Assignments are applied to EVERY session host VM in the pool (role\_key × vm\_key composite keys). For external/cross-module scoping, layer ../RoleAssignment directly. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "Group")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| source\_image\_id | ID of a Compute Gallery image version (or Shared/Community Gallery image / version ID). If provided, it takes precedence over `image`/`image_plan` — the `source_image_reference` and `plan` blocks are suppressed. The custom image inherits Trusted Launch (Secure Boot + vTPM) from its gallery image definition, so `enable_trusted_launch` on the VM is unaffected. | `string` | `null` | no |
+| subscription\_acronym | n/a | `string` | `null` | no |
+| tags | Tags applied to all taggable resources in this module. | `map(string)` | `{}` | no |
+| vm\_count | Number of session hosts to create. | `number` | `1` | no |
+| vm\_size | VM size. D4s\_v5 recommended for Win11 multi-session (min 4 vCPU). | `string` | `"Standard_D4s_v5"` | no |
+| workload | Workload suffix for VM naming (e.g. sh for session host). | `string` | `"sh"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| computer\_names | Map of VM suffix => Windows computer (hostname) |
+| lock\_ids | Map of VM suffix => management lock ID. Empty map when var.lock is null. |
+| principal\_ids | Map of VM suffix => SystemAssigned identity principal ID (for RBAC grants) |
+| private\_ips | Map of VM suffix => NIC private IP |
+| resource | Map of VM suffix => full azurerm\_windows\_virtual\_machine resource object. Marked sensitive because the VM object carries the admin\_password attribute. |
+| role\_assignment\_ids | Map of composite key ({role\_key}:{vm\_key}) => role assignment ID. Empty map when var.role\_assignments is empty. |
+| vm\_ids | Map of VM suffix => VM resource ID |
+| vm\_names | Map of VM suffix => VM resource name |
+<!-- END_TF_DOCS -->

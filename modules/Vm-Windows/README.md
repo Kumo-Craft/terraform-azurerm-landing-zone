@@ -155,3 +155,94 @@ This must be set **before** the upgrade to prevent Terraform from changing `lice
 - **Admin password**: read from Key Vault at plan time; ignored on subsequent applies (`lifecycle.ignore_changes`). Rotate via `az vm reset` out of band.
 - **CMK encryption**: pass `disk_encryption_set_id` to encrypt OS + data disks with a customer-managed key. The DES principal must have `Reader` + `Key Vault Crypto Service Encryption User` on the wrapping key.
 - **Data disks**: replicated across every VM in `vm_count`. LUNs must be unique within the map. The disk name pattern includes the VM suffix so disks are unambiguous in the RG.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_managed_disk.data](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/managed_disk) | resource |
+| [azurerm_network_interface.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_virtual_machine_data_disk_attachment.data](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_data_disk_attachment) | resource |
+| [azurerm_virtual_machine_extension.entra_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_windows_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/windows_virtual_machine) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/key_vault_secret) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| admin\_password\_kv\_id | Key Vault resource ID holding the local admin password secret. | `string` | n/a | yes |
+| admin\_password\_secret\_name | Name of the Key Vault secret holding the local admin password. | `string` | n/a | yes |
+| location | ############################################################## REQUIRED ############################################################## | `string` | n/a | yes |
+| resource\_group\_name | n/a | `string` | n/a | yes |
+| subnet\_id | Subnet resource ID where the NIC(s) will be deployed. | `string` | n/a | yes |
+| accelerated\_networking\_enabled | Enable Accelerated Networking on the VM NIC. Set false for sizes that do not support SR-IOV. | `bool` | `true` | no |
+| admin\_username | Local admin username (created at provisioning; intended for break-glass only — primary access is Entra ID). | `string` | `"azureadmin"` | no |
+| availability\_zones | Zones to spread VMs across (round-robin). Empty list = no zone placement. | `list(string)` | <pre>[<br>  "1",<br>  "2",<br>  "3"<br>]</pre> | no |
+| boot\_diagnostics\_enabled | Enable boot diagnostics. Uses Azure-managed storage unless boot\_diagnostics\_storage\_account\_uri is set. | `bool` | `true` | no |
+| boot\_diagnostics\_storage\_account\_uri | Custom storage account primary blob endpoint for boot diagnostics. Null = use Azure-managed storage. | `string` | `null` | no |
+| bypass\_platform\_safety\_checks\_on\_user\_schedule | When patch\_mode = AutomaticByPlatform, defer to a user-defined maintenance configuration (Update Manager). | `bool` | `true` | no |
+| computer\_name\_prefix | Windows computer name prefix (≤ 13 chars; 2 digits appended → 15 total NetBIOS max). Lowercase alphanumeric. Defaults to '{workload}{env}'. | `string` | `null` | no |
+| data\_disks | Data disks to create and attach to every VM. Map key becomes part of the disk name.<br>Each disk is replicated for every VM in vm\_count.<br>- disk\_size\_gb                   : size in GiB<br>- lun                            : LUN (must be unique per VM)<br>- storage\_account\_type           : Standard\_LRS \| StandardSSD\_LRS \| Premium\_LRS \| PremiumV2\_LRS \| UltraSSD\_LRS<br>- caching                        : None \| ReadOnly \| ReadWrite<br>- create\_option                  : Empty \| Copy \| Restore (defaults to Empty)<br>- public\_network\_access\_enabled  : allow SAS export/import over the public internet (defaults to false — secure) | <pre>map(object({<br>    disk_size_gb         = number<br>    lun                  = number<br>    storage_account_type = optional(string, "Premium_LRS")<br>    caching              = optional(string, "ReadWrite")<br>    create_option        = optional(string, "Empty")<br>    # CKV_AZURE_251: secure-by-default — public network access to the disk's<br>    # underlying data (via SAS export/import) is DISABLED by default. Azure<br>    # platform default is true. Attached VM operation, backup/restore, and<br>    # resize are unaffected; only SAS-based public export/import is blocked.<br>    # Set true per-disk only when SAS export over the public internet is required.<br>    public_network_access_enabled = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| disk\_encryption\_set\_id | Disk Encryption Set resource ID used to encrypt OS and data disks with a customer-managed key. Null = platform-managed key. | `string` | `null` | no |
+| enable\_trusted\_launch | Enable Trusted Launch (vTPM + Secure Boot). Microsoft-recommended for new Windows VMs. | `bool` | `true` | no |
+| encryption\_at\_host\_enabled | Enable host-based encryption (encrypts temp disk + OS disk cache at hypervisor layer). CAF secure-by-default = true. Azure platform default is false; setting true on existing VMs requires VM stop/dealloc. Callers with existing non-encrypted VMs should set this to false during transition, then schedule a maintenance window to flip back to true. | `bool` | `true` | no |
+| environment | n/a | `string` | `null` | no |
+| hotpatching\_enabled | Enable hotpatching where supported (Server 2022 Datacenter Azure Edition). Reduces reboots for security patches. | `bool` | `false` | no |
+| image | Marketplace image reference. Default: Windows Server 2022 Datacenter Azure Edition. | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>    version   = optional(string, "latest")<br>  })</pre> | <pre>{<br>  "offer": "WindowsServer",<br>  "publisher": "MicrosoftWindowsServer",<br>  "sku": "2022-datacenter-azure-edition",<br>  "version": "latest"<br>}</pre> | no |
+| license\_type | Azure Hybrid Benefit license type for the Windows VM.<br>Allowed: "Windows\_Client", "Windows\_Server", "None".<br>Default is "None" (pay-as-you-go). Set "Windows\_Server" only if you hold active<br>Software Assurance entitlement — applying AHB without a valid SA licence is a<br>compliance violation under the Microsoft Product Terms.<br>BREAKING CHANGE (v0.2.72): default changed from "Windows\_Server" to "None".<br>Callers relying on the previous implicit AHB default MUST explicitly set<br>license\_type = "Windows\_Server" before upgrading to preserve AHB pricing. | `string` | `"None"` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) applied to each VM. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit VM base name override (escape hatch). If set, bypasses ../Naming. If null, uses the canonical convention via ../Naming submodule. | `string` | `null` | no |
+| os\_disk | OS disk configuration. Defaults to Premium\_LRS 128 GiB, ReadWrite caching. | <pre>object({<br>    storage_account_type = optional(string, "Premium_LRS")<br>    caching              = optional(string, "ReadWrite")<br>    disk_size_gb         = optional(number, 128)<br>  })</pre> | `{}` | no |
+| patch\_mode | Patch orchestration mode. AutomaticByPlatform integrates with Azure Update Manager.<br>Allowed: "Manual", "AutomaticByOS", "AutomaticByPlatform". | `string` | `"AutomaticByPlatform"` | no |
+| region\_code | n/a | `string` | `null` | no |
+| role\_assignments | Map of role assignments to apply at each VM scope. Assignments are applied to EVERY VM in the pool (role\_key × vm\_key composite keys). Default principal\_type='ServicePrincipal' for VM-scoped RBAC (e.g. granting access to managed identities). | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | n/a | `string` | `null` | no |
+| tags | Tags to apply to all resources created by this module. | `map(string)` | `{}` | no |
+| user\_assigned\_identity\_ids | User-Assigned Managed Identity resource IDs to attach to the VM. Empty list = SystemAssigned only. | `list(string)` | `[]` | no |
+| vm\_count | Number of Windows VMs to create. | `number` | `1` | no |
+| vm\_size | VM size. D4s\_v5 is a sensible general-purpose default. | `string` | `"Standard_D4s_v5"` | no |
+| workload | Workload suffix for VM naming (e.g. app, srv, web). | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| computer\_names | Map of VM suffix => Windows computer (NetBIOS hostname) |
+| data\_disk\_ids | Map of '{vm\_suffix}-{disk\_key}' => managed disk resource ID |
+| lock\_ids | Map of VM suffix => management lock ID. Empty map when var.lock is null. |
+| nic\_ids | Map of VM suffix => NIC resource ID |
+| principal\_ids | Map of VM suffix => SystemAssigned identity principal ID (for RBAC grants) |
+| private\_ips | Map of VM suffix => NIC private IP |
+| resources | Map of VM suffix => azurerm\_windows\_virtual\_machine resource object. Marked sensitive because the VM object carries the admin\_password attribute. |
+| role\_assignment\_ids | Map of composite key ({role\_key}.{vm\_key}) => role assignment ID. Empty map when var.role\_assignments is empty. |
+| vm\_ids | Map of VM suffix => VM resource ID |
+| vm\_names | Map of VM suffix => VM resource name |
+<!-- END_TF_DOCS -->
