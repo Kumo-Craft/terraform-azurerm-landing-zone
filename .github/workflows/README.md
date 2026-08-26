@@ -5,7 +5,7 @@ The repo's automation, migrated from the retired Azure DevOps pipelines
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| [ci-modules.yml](ci-modules.yml) | PR touching `*.tf` / tests · Mon 06:00 UTC · manual | Dynamic matrix: fmt / init / validate / `terraform test` per changed submodule + root. Weekly run validates **everything**. |
+| [ci-modules.yml](ci-modules.yml) | every PR · Mon 06:00 UTC · manual | Dynamic matrix: fmt / init / validate / `terraform test` per changed submodule + root (cheap no-op on docs-only PRs). Weekly run validates **everything**. The **CI OK** summary job is the required branch-protection check. |
 | [iac-security.yml](iac-security.yml) | PR touching `*.tf` / lint+scan configs · Mon 05:00 UTC · manual | Checkov + Trivy config (advisory, SARIF → Code Scanning + artifacts) + TFLint (advisory). Final **Checkov regression gate**: red only on a finding not in `.checkov.baseline`. |
 | [drift-lint.yml](drift-lint.yml) | PR touching the duplicated blocks · manual | `scripts/check-drift.sh` — warns when orchestrator inline copies drift from canonical modules (advisory until `--strict`). |
 | [release.yml](release.yml) | `v*` tag push | terraform-docs bundle + git-log release notes, published as a **GitHub Release**. |
@@ -20,13 +20,22 @@ not from a workflow. Auto-filed issues are deduped by exact title + label via
 
 ### 1. Branch protection (replaces the ADO "Build Validation" policies)
 
-Settings → Branches → protection rule on `main` → require status checks:
+Applied on `main` via the API (already active):
 
-- `Detect modified modules`, `Validate submodule`, `Validate root meta-module` (CI Modules)
-- `Run drift check` — keep **optional** (advisory) like on ADO
-- `Checkov + Trivy — IaC posture (modules/)` — keep **optional** until the
-  baseline-keyed regression gate proves stable (see the caveat in
-  [iac-security.yml](iac-security.yml)), then make it required
+- required status check: **CI OK** — the [ci-modules.yml](ci-modules.yml)
+  summary job. It aggregates detect + all matrix validates + root; skipped
+  jobs (docs-only PR) count as success. One stable context instead of the
+  dynamic matrix names.
+- force pushes and branch deletion blocked; PR conversations must be
+  resolved before merge.
+- no required reviews (solo maintainer) and admins not enforced — the
+  owner can still push/fix directly in a pinch.
+
+Drift Lint and IaC Security stay **advisory** (not required): they are
+path-filtered, and a required path-filtered check blocks PRs that don't
+touch its paths. Promote the Checkov regression gate to required only
+after removing its path filter and once the baseline caveat in
+[iac-security.yml](iac-security.yml) proves stable.
 
 ### 2. Renovate (replaces the ADO `renovate.yml` pipeline)
 

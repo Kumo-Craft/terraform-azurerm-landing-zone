@@ -7,21 +7,20 @@
 # catch drift from upstream azurerm provider releases.
 #
 # PR validation is native here — the `pull_request` trigger below replaces
-# the Azure Repos "Build Validation branch policy". To make it BLOCKING,
-# add the `Validate submodule` / `Validate root meta-module` checks as
-# required status checks on the `main` branch protection rule
-# (Settings → Branches). See .github/workflows/README.md.
+# the Azure Repos "Build Validation branch policy". Branch protection on
+# `main` requires the single "CI OK" summary check (see the ci-ok job).
+#
+# DELIBERATELY no `paths:` filter on the PR trigger: a required check from
+# a path-filtered workflow never reports on PRs outside those paths, which
+# blocks their merge forever. Instead the workflow runs on every PR — the
+# detect job is a cheap no-op on docs-only PRs, the validate jobs skip
+# (skipped counts as success for "CI OK").
 
 name: CI Modules
 
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'modules/**/*.tf'
-      - 'modules/**/*.tftest.hcl'
-      - '*.tf'
-      - 'examples/**/*.tf'
   schedule:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC — weekly full-validate sweep
   workflow_dispatch:      # manual full sweep
@@ -158,3 +157,24 @@ jobs:
 
       - name: Terraform Validate (root)
         run: terraform validate
+
+  # ── Summary gate — the ONE required status check ────────────────────
+  # Branch protection requires this single "CI OK" context instead of the
+  # dynamic matrix job names ("Validate submodule (KeyVault)", …). It
+  # always runs: skipped validate jobs (docs-only PR) count as success;
+  # any failure or cancellation upstream turns it red.
+  ci-ok:
+    name: CI OK
+    needs: [detect, validate-modules, validate-root]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify job results
+        run: |
+          results="${{ join(needs.*.result, ', ') }}"
+          echo "Job results: $results"
+          if [[ "$results" == *"failure"* || "$results" == *"cancelled"* ]]; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi
+          echo "All CI jobs green (skipped = not applicable)."
