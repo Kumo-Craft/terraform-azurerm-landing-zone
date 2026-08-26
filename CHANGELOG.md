@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Kumo-Craft/terraform-azurerm-landing-zone/compare/v0.1.0...v0.1.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* **security:** pin actions to commit SHAs, remove shell interpolation of untrusted values ([9977173](https://github.com/Kumo-Craft/terraform-azurerm-landing-zone/commit/9977173816bd3541ad1b8a0cf25de3599efa0b93))
+
 ## 0.1.0 (2026-08-26)
 
 
