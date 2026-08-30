@@ -146,14 +146,14 @@ jobs:
 
       - name: Upload Checkov SARIF to Code Scanning
         if: always()
-        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         with:
           sarif_file: ${{ runner.temp }}/sarif/checkov.sarif
           category: checkov
 
       - name: Upload Trivy SARIF to Code Scanning
         if: always()
-        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         with:
           sarif_file: ${{ runner.temp }}/sarif/trivy.sarif
           category: trivy
