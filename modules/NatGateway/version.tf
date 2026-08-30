@@ -4,7 +4,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
     # azapi is required because the hashicorp/azurerm provider does not yet expose
     # the StandardV2 NAT Gateway SKU (which adds zone-redundancy + larger PIP
