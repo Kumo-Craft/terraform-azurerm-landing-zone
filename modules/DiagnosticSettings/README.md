@@ -8,7 +8,7 @@ Creates Azure Monitor Diagnostic Settings on multiple Azure resources, forwardin
 
 ```hcl
 module "diagnostic_settings" {
-  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/DiagnosticSettings?ref=v0.2.48"
+  source = "git::https://dev.azure.com/azure-forge/Modules/_git/Modules//modules/DiagnosticSettings?ref=v0.3.0"
 
   diagnostic_settings = {
     vnet = {
@@ -66,10 +66,10 @@ inputs = {
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | name | `string` | Yes | -- | Diagnostic setting name |
-| target_resource_id | `string` | Yes | -- | Target Azure resource ID |
+| target_resource_id | `string` | Yes | -- | Target Azure resource ID — a resource-scoped ID (`.../providers/<type>/<name>`) **or** a bare subscription ID (`/subscriptions/<guid>`) for the subscription Activity Log |
 | logs | `list(string)` | No | `[]` | Per-category log names (e.g. `["kube-audit", "kube-apiserver"]`) |
 | log_groups | `list(string)` | No | `[]` | Category-group names (e.g. `["allLogs", "audit"]`). Required for AKS audit-log capture and resources whose categories evolve. |
-| metrics | `list(string)` | No | `[]` | Metric categories (typically `["AllMetrics"]`) |
+| metrics | `list(string)` | No | `[]` | Metric categories (typically `["AllMetrics"]`). **No effect at subscription scope** (see below) |
 | log_analytics_workspace_id | `string` | No | -- | Log Analytics Workspace ID |
 | log_analytics_destination_type | `string` | No | -- | `Dedicated` (per-category tables, recommended) or `AzureDiagnostics` (legacy) |
 | storage_account_id | `string` | No | -- | Storage Account ID for archival |
@@ -103,49 +103,34 @@ diagnostic_settings = {
 You can mix `logs` and `log_groups` in the same setting — both lists are
 expanded into individual `enabled_log` blocks under the hood.
 
+### Subscription-scope Activity Log
+
+Pass a **bare subscription ID** as `target_resource_id` to route the
+subscription-level **Activity Log** (control-plane operations) to a destination.
+There is **no platform-metrics namespace at subscription scope**, so **leave
+`metrics` empty** — Azure accepts the setting either way (the unified
+`Microsoft.Insights/diagnosticSettings` API even defaults it to `AllMetrics`),
+but at this scope nothing is emitted, so a metric list has no effect.
+
+```hcl
+diagnostic_settings = {
+  activity_log = {
+    name                       = "diag-activitylog-to-law"
+    target_resource_id         = "/subscriptions/00000000-0000-0000-0000-000000000000"
+    log_analytics_workspace_id = dependency.law.outputs.id
+    log_groups                 = ["allLogs"]
+    # metrics MUST stay empty at subscription scope
+  }
+}
+```
+
+Use the Activity Log categories (`Administrative`, `Security`, `ServiceHealth`,
+`Alert`, `Recommendation`, `Policy`, `Autoscale`, `ResourceHealth`) via `logs`,
+or the `allLogs` group via `log_groups`.
+
 ## Outputs
 
 | Name | Description |
 |------|-------------|
 | ids | Map of key => Diagnostic Setting ID |
 | resources | Map of key => complete Diagnostic Setting object |
-
-## Reference
-
-<!-- BEGIN_TF_DOCS -->
-## Requirements
-
-| Name | Version |
-|------|---------|
-| terraform | >= 1.12.0 |
-| azurerm | ~> 4.0 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| azurerm | ~> 4.0 |
-
-## Modules
-
-No modules.
-
-## Resources
-
-| Name | Type |
-|------|------|
-| [azurerm_monitor_diagnostic_setting.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_diagnostic_setting) | resource |
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| diagnostic\_settings | A map of Diagnostic Settings to create. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>- `name`                                     - (Required) Diagnostic setting name.<br>- `target_resource_id`                       - (Required) Target Azure resource ID.<br>- `logs`                                     - (Optional) Per-category log names (e.g. ["kube-audit", "kube-apiserver"]). Defaults to [].<br>- `log_groups`                               - (Optional) Category-group names (e.g. ["allLogs", "audit"]). Required for AKS audit-log capture and for resources whose categories evolve. Defaults to [].<br>- `metrics`                                  - (Optional) Metric categories to enable (typically ["AllMetrics"]). Defaults to [].<br>- `log_analytics_workspace_id`               - (Optional) Log Analytics Workspace ID.<br>- `log_analytics_destination_type`           - (Optional) Either "Dedicated" (resource-specific tables, RECOMMENDED for new deployments per MS Learn CAF) or "AzureDiagnostics" (legacy shared table — for backward compatibility only). Default null = provider-managed.<br>- `storage_account_id`                       - (Optional) Storage Account ID for archival.<br>- `event_hub_authorization_rule_id`          - (Optional) Event Hub authorization rule ID.<br>- `event_hub_name`                           - (Optional) Event Hub name.<br>- `marketplace_partner_resource_id`          - (Optional) Marketplace partner resource ID. | <pre>map(object({<br>    name                            = string<br>    target_resource_id              = string<br>    logs                            = optional(list(string), [])<br>    log_groups                      = optional(list(string), [])<br>    metrics                         = optional(list(string), [])<br>    log_analytics_workspace_id      = optional(string)<br>    log_analytics_destination_type  = optional(string) # Either 'Dedicated' (resource-specific tables, RECOMMENDED for new deployments per MS Learn CAF) or 'AzureDiagnostics' (legacy shared table — for backward compatibility only). Default null = provider-managed.<br>    storage_account_id              = optional(string)<br>    event_hub_authorization_rule_id = optional(string)<br>    event_hub_name                  = optional(string)<br>    marketplace_partner_resource_id = optional(string)<br>  }))</pre> | n/a | yes |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| ids | Map of key => Diagnostic Setting ID |
-| resources | Map of key => complete Diagnostic Setting resource object |
-<!-- END_TF_DOCS -->

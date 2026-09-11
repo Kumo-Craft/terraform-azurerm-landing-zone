@@ -46,17 +46,17 @@ run "happy_minimal" {
   command = plan
 
   assert {
-    condition     = azurerm_consumption_budget_resource_group.this.name == "bdg-con-prod-gwc-platform"
+    condition     = azurerm_consumption_budget_resource_group.this[0].name == "bdg-con-prod-gwc-platform"
     error_message = "Budget name must derive as bdg-{acr}-{env}-{region}-{workload}."
   }
 
   assert {
-    condition     = azurerm_consumption_budget_resource_group.this.amount == 1000 && azurerm_consumption_budget_resource_group.this.time_grain == "Monthly"
+    condition     = azurerm_consumption_budget_resource_group.this[0].amount == 1000 && azurerm_consumption_budget_resource_group.this[0].time_grain == "Monthly"
     error_message = "amount/time_grain must pass through with the Monthly default."
   }
 
   assert {
-    condition     = length(azurerm_consumption_budget_resource_group.this.notification) == 1
+    condition     = length(azurerm_consumption_budget_resource_group.this[0].notification) == 1
     error_message = "Exactly one notification block must be planned."
   }
 }
@@ -72,7 +72,7 @@ run "name_override" {
   }
 
   assert {
-    condition     = azurerm_consumption_budget_resource_group.this.name == "bdg-custom-name"
+    condition     = azurerm_consumption_budget_resource_group.this[0].name == "bdg-custom-name"
     error_message = "var.name must override the derived name."
   }
 }
@@ -92,7 +92,7 @@ run "notifications_multi" {
   }
 
   assert {
-    condition     = length(azurerm_consumption_budget_resource_group.this.notification) == 3
+    condition     = length(azurerm_consumption_budget_resource_group.this[0].notification) == 3
     error_message = "Three notification blocks must be planned."
   }
 }
@@ -110,7 +110,7 @@ run "filter_dimension" {
   }
 
   assert {
-    condition     = length(azurerm_consumption_budget_resource_group.this.filter) == 1
+    condition     = length(azurerm_consumption_budget_resource_group.this[0].filter) == 1
     error_message = "A filter block must be planned when var.filter is set."
   }
 }
@@ -194,4 +194,109 @@ run "validator_bad_rg_id" {
   }
 
   expect_failures = [var.resource_group_id]
+}
+
+# -----------------------------------------------------------------------
+# Test 11: subscription scope with a BARE GUID — normalized to /subscriptions/<guid>.
+# -----------------------------------------------------------------------
+run "subscription_bare_guid" {
+  command = plan
+
+  variables {
+    resource_group_id = null
+    subscription_id   = "00000000-0000-0000-0000-000000000000"
+  }
+
+  assert {
+    condition     = length(azurerm_consumption_budget_subscription.this) == 1 && length(azurerm_consumption_budget_resource_group.this) == 0
+    error_message = "Only the subscription budget must be planned when subscription_id is set."
+  }
+  assert {
+    condition     = azurerm_consumption_budget_subscription.this[0].subscription_id == "/subscriptions/00000000-0000-0000-0000-000000000000"
+    error_message = "Bare GUID must be normalized to /subscriptions/<guid>."
+  }
+  assert {
+    condition     = azurerm_consumption_budget_subscription.this[0].name == "bdg-con-prod-gwc-platform"
+    error_message = "Naming is shared across both scopes."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 12: subscription scope with a full /subscriptions/<guid> path.
+# -----------------------------------------------------------------------
+run "subscription_full_path" {
+  command = plan
+
+  variables {
+    resource_group_id = null
+    subscription_id   = "/subscriptions/00000000-0000-0000-0000-000000000000"
+  }
+
+  assert {
+    condition     = azurerm_consumption_budget_subscription.this[0].subscription_id == "/subscriptions/00000000-0000-0000-0000-000000000000"
+    error_message = "A full path must pass through unchanged."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 13: XOR — both scopes set → fail.
+# -----------------------------------------------------------------------
+run "validator_xor_both" {
+  command = plan
+
+  variables {
+    subscription_id = "00000000-0000-0000-0000-000000000000"
+    # resource_group_id inherited from shared vars (also set) → both set.
+  }
+
+  expect_failures = [var.resource_group_id]
+}
+
+# -----------------------------------------------------------------------
+# Test 14: XOR — neither scope set → fail.
+# -----------------------------------------------------------------------
+run "validator_xor_neither" {
+  command = plan
+
+  variables {
+    resource_group_id = null
+    subscription_id   = null
+  }
+
+  expect_failures = [var.resource_group_id]
+}
+
+# -----------------------------------------------------------------------
+# Test 15: subscription scope with lock.
+# -----------------------------------------------------------------------
+run "subscription_with_lock" {
+  command = plan
+
+  variables {
+    resource_group_id = null
+    subscription_id   = "00000000-0000-0000-0000-000000000000"
+    lock              = { kind = "CanNotDelete" }
+  }
+
+  assert {
+    condition     = length(module.lock.ids) == 1
+    error_message = "Lock must be planned on the subscription budget too."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 16: notification with all 3 contact lists empty → fail (both scopes;
+# validation is on the shared var.notifications). Exercised here on the
+# subscription scope to prove the guard is scope-independent.
+# -----------------------------------------------------------------------
+run "validator_sub_notification_no_contact" {
+  command = plan
+
+  variables {
+    resource_group_id = null
+    subscription_id   = "00000000-0000-0000-0000-000000000000"
+    notifications     = [{ threshold = 90 }]
+  }
+
+  expect_failures = [var.notifications]
 }

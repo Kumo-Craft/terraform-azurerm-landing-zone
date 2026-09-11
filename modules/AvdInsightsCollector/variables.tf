@@ -27,6 +27,25 @@ variable "name" {
   }
 }
 
+###############################################################
+# NAMING CONVENTION — DCE
+# Convention: dce-{acr}-{env}-{region}-{workload}
+#   e.g. dce-avd-prod-gwc-01
+# No -avdinsights component: the endpoint is regional and data-set
+# agnostic, unlike the rule it serves.
+###############################################################
+variable "data_collection_endpoint_name" {
+  description = "Explicit DCE name override (escape hatch). If null, derived via ../Naming (dce-{acr}-{env}-{region}-{workload})."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.data_collection_endpoint_name != null || (var.subscription_acronym != null && var.environment != null && var.region_code != null)
+    error_message = "Either var.data_collection_endpoint_name must be set OR all 3 naming components (subscription_acronym, environment, region_code) must be non-null. workload has a default."
+  }
+}
+
 variable "subscription_acronym" {
   type        = string
   default     = null
@@ -106,13 +125,14 @@ variable "session_host_ids" {
   default     = []
   nullable    = false
   description = <<-EOT
-    Resource IDs of the AVD session host VMs to associate with the DCR.
+    Resource IDs of the AVD session host VMs to associate with the DCR
+    AND with the configuration access DCE (two associations per host).
 
     Defaults to [] on purpose: the DCR must be creatable BEFORE the session
     hosts exist (the host pool build consumes the workspace/DCR), so the usual
-    flow is — apply once with [] to create the DCR, then a second apply once
-    the hosts are up to create the associations. Passing unknown-at-plan host
-    ids here would otherwise force a for_each on unknown keys.
+    flow is — apply once with [] to create the DCR/DCE, then a second apply
+    once the hosts are up to create the associations. Passing unknown-at-plan
+    host ids here would otherwise force a for_each on unknown keys.
   EOT
 }
 
@@ -134,6 +154,22 @@ variable "performance_counters" {
       - 60s: 5 counters (free space, disk sec/transfer, Terminal Services sessions)
     Source: https://learn.microsoft.com/azure/virtual-desktop/insights-costs
     Override to trim cost or add counters.
+
+    ⚠️ SINGLE-INSTANCE OBJECTS TAKE NO (*). Memory and Terminal Services have no
+    instances, so `\Memory(*)\...` and `\Terminal Services(*)\...` are INVALID and
+    silently collect NOTHING. Verified on a session host, 2026-09-03:
+
+      Get-Counter '\Memory(*)\Available MBytes' -> "counter path could not be interpreted"
+      Get-Counter '\Memory\Available MBytes'    -> 28534
+
+    Microsoft's own counter list writes them with `(*)`, but that page is
+    DESCRIPTIVE, not literal DCR syntax — it also writes `Logical Disk` while the
+    Windows object is `LogicalDisk`. Do NOT "restore" the parentheses to match the
+    docs: these 7 counters silently collected nothing until 2026-09-03.
+
+    Multi-instance objects DO take (*): PhysicalDisk, User Input Delay, RemoteFX
+    Network. RemoteFX yields data only while a session is connected — an empty
+    RemoteFX on an idle host is expected, not a misconfiguration.
   EOT
 
   default = [
@@ -143,10 +179,10 @@ variable "performance_counters" {
       counter_specifiers = [
         "\\LogicalDisk(C:)\\Avg. Disk Queue Length",
         "\\LogicalDisk(C:)\\Current Disk Queue Length",
-        "\\Memory(*)\\Available Mbytes",
-        "\\Memory(*)\\Page Faults/sec",
-        "\\Memory(*)\\Pages/sec",
-        "\\Memory(*)\\% Committed Bytes In Use",
+        "\\Memory\\Available MBytes",
+        "\\Memory\\Page Faults/sec",
+        "\\Memory\\Pages/sec",
+        "\\Memory\\% Committed Bytes In Use",
         "\\PhysicalDisk(*)\\Avg. Disk Queue Length",
         "\\PhysicalDisk(*)\\Avg. Disk sec/Read",
         "\\PhysicalDisk(*)\\Avg. Disk sec/Transfer",
@@ -164,9 +200,9 @@ variable "performance_counters" {
       counter_specifiers = [
         "\\LogicalDisk(C:)\\% Free Space",
         "\\LogicalDisk(C:)\\Avg. Disk sec/Transfer",
-        "\\Terminal Services(*)\\Active Sessions",
-        "\\Terminal Services(*)\\Inactive Sessions",
-        "\\Terminal Services(*)\\Total Sessions",
+        "\\Terminal Services\\Active Sessions",
+        "\\Terminal Services\\Inactive Sessions",
+        "\\Terminal Services\\Total Sessions",
       ]
     },
   ]

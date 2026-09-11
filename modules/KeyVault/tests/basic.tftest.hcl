@@ -117,6 +117,44 @@ run "network_acls_invalid_bypass_fails" {
 }
 
 # ---------------------------------------------------------------------
+# Test 4b: Network ACLs — a non-null value emits exactly one network_acls
+# block and wires default_action through. (The complementary null case is
+# NOT asserted here: network_acls is Optional+Computed on azurerm_key_vault
+# — verified in the provider source, v4.81.0 key_vault_resource.go — so an
+# omitted block plans to an UNKNOWN value, which is precisely the mechanism
+# that preserves any existing/out-of-band ACLs instead of resetting them.
+# That non-regression guarantee is a provider property, not a plan-assertable
+# one under mock_provider.)
+# ---------------------------------------------------------------------
+run "network_acls_set_emits_block" {
+  command = plan
+
+  variables {
+    subscription_acronym = "mgm"
+    environment          = "nprd"
+    region_code          = "gwc"
+    workload             = "test"
+    location             = "germanywestcentral"
+    resource_group_name  = "rg-mgm-nprd-gwc-test"
+
+    network_acls = {
+      default_action = "Deny"
+      bypass         = "AzureServices"
+      ip_rules       = ["203.0.113.0/24"]
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_key_vault.this.network_acls) == 1
+    error_message = "A non-null network_acls must emit exactly one network_acls block."
+  }
+  assert {
+    condition     = azurerm_key_vault.this.network_acls[0].default_action == "Deny"
+    error_message = "network_acls.default_action must wire through to the resource block."
+  }
+}
+
+# ---------------------------------------------------------------------
 # Test 5: Legacy name escape-hatch — explicit `name` bypasses Naming module.
 # ---------------------------------------------------------------------
 run "legacy_name_override" {

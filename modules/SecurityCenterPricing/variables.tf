@@ -4,7 +4,7 @@
 
 variable "plans" {
   type = map(object({
-    # Secure-by-default (CKV_AZURE_19): tier defaults to
+    # Secure-by-default (CKV_AZURE_19 / repo CLAUDE.md): tier defaults to
     # "Standard" (Defender ON) when omitted for a given resource_type.
     # ⚠️ COST: "Standard" facture TOUTES les ressources de ce type dans la
     #    sub. Passer explicitement tier = "Free" pour désactiver un plan.

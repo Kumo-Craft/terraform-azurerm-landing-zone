@@ -132,3 +132,70 @@ run "validator_defender_plans_invalid_value" {
 
   expect_failures = [var.defender_plans]
 }
+
+# -----------------------------------------------------------------------
+# Test 6: happy_vmss_not_scopes — vmss_policy_not_scopes is accepted and wired
+# into policy_assignments_to_modify (not_scopes on the two VMSS assignments at
+# mg-lz). A type error in the not_scopes wiring, or a malformed Enforce-GR-KeyVault
+# parameters block (now unconditionally present), would fail this plan against the
+# avm-ptn-alz child schema — so a successful plan here IS the wiring guard.
+# -----------------------------------------------------------------------
+run "happy_vmss_not_scopes" {
+  command = plan
+
+  variables {
+    vmss_policy_not_scopes = [
+      "/subscriptions/00000000-0000-0000-0000-000000000003/resourceGroups/rg-api-prod-gwc-aks-nodes",
+    ]
+  }
+
+  assert {
+    condition     = length(var.vmss_policy_not_scopes) == 1
+    error_message = "vmss_policy_not_scopes must be accepted and wired (a type error in not_scopes would fail this plan)."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 7: aks_allowed_container_images_regex — BEHAVIOUR of the default regex.
+# This is the crux: the MCSB allowed-images pattern must match the registries
+# POST-Group actually uses (MCR + any ACR) and must NOT match the public-internet
+# registries that are meant to stay red (ghcr.io, docker.n8n.io). Also proves the
+# override is wired (a bad parameters block would fail the plan).
+# -----------------------------------------------------------------------
+run "regex_allows_mcr_and_acr_rejects_internet" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      length(regexall(var.aks_allowed_container_images_regex, "mcr.microsoft.com/oss/kubernetes/pause:3.6")) > 0,
+      length(regexall(var.aks_allowed_container_images_regex, "crpgsprodgwcaks.azurecr.io/apps/myapp:v1.2.3")) > 0,
+    ])
+    error_message = "regex must match MCR and *.azurecr.io image references (the registries actually in use)."
+  }
+  assert {
+    condition = alltrue([
+      length(regexall(var.aks_allowed_container_images_regex, "ghcr.io/external-secrets/external-secrets:v0.9.0")) == 0,
+      length(regexall(var.aks_allowed_container_images_regex, "docker.n8n.io/n8nio/n8n:1.0.0")) == 0,
+    ])
+    error_message = "regex must NOT match public-internet registries (ghcr.io, docker.n8n.io) — those stay red by design (mirror into ACR)."
+  }
+  # A registry that merely CONTAINS azurecr.io as a suffix must not sneak through.
+  assert {
+    condition     = length(regexall(var.aks_allowed_container_images_regex, "evil.azurecr.io.attacker.com/x:1")) == 0
+    error_message = "regex must be anchored so an azurecr.io look-alike host cannot bypass it."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 8: validator_bad_container_images_regex — a malformed RE2 pattern is
+# rejected at plan time by the variable validation.
+# -----------------------------------------------------------------------
+run "validator_bad_container_images_regex" {
+  command = plan
+
+  variables {
+    aks_allowed_container_images_regex = "^(unclosed"
+  }
+
+  expect_failures = [var.aks_allowed_container_images_regex]
+}

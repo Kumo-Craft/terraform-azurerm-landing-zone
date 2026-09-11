@@ -172,6 +172,24 @@ variable "ddos_protection_plan_id" {
   description = "DDoS Protection Plan resource ID"
 }
 
+variable "vmss_policy_not_scopes" {
+  type        = list(string)
+  default     = []
+  nullable    = false
+  description = <<-EOT
+  Resource IDs to EXCLUDE (notScopes) from the VMSS monitoring / change-tracking
+  DINE policy assignments at mg-lz (Deploy-VMSS-Monitoring, Deploy-VMSS-ChangeTrack).
+
+  Typical use: AKS node resource groups (rg-...-aks-nodes) whose VMSS are managed by
+  AKS and must not be governed by these policies — add one entry per AKS.
+
+  Wired to `not_scopes` on both assignments via policy_assignments_to_modify
+  (supported by avm-ptn-alz 0.21.0). Default [] leaves notScopes empty — the current
+  state — so it is non-breaking. Previously this input was passed by the ALZ unit but
+  NOT declared here, so Terraform silently discarded it (the exclusions never applied).
+  EOT
+}
+
 variable "ama_identity_id" {
   type        = string
   nullable    = false
@@ -222,6 +240,39 @@ variable "backup_exclusion_tags" {
   default     = ["NoBackup"]
   nullable    = false
   description = "Tags to exclude from VM Backup policy"
+}
+
+variable "aks_allowed_container_images_regex" {
+  type        = string
+  nullable    = false
+  description = <<-EOT
+  Regex of container-image references ALLOWED by the MCSB rule
+  `ensureAllowedContainerImagesInKubernetesCluster` (Deploy-ASC-Monitoring @ mg-lzr).
+
+  The ALZ default `^(.+){0}$` matches ONLY the empty string → no image can satisfy it →
+  the rule is inert (produces phantom Gatekeeper violations that signal nothing). This
+  overrides it with the real allowed registries.
+
+  Default: MCR + any Azure Container Registry — `^(mcr\.microsoft\.com|[a-z0-9]+\.azurecr\.io)/.*$`.
+  Deliberately NOT tied to a single ACR name: this is applied at mg-lzr (ALL landing zones),
+  so each LZ's own ACR (cr…​.azurecr.io) must match without hardcoding. Public-internet
+  registries (ghcr.io, docker.io, docker.n8n.io, quay.io, …) are intentionally excluded —
+  mirror those images into an ACR rather than widening this pattern.
+
+  AUDIT-phase value. When flipping the effect to `deny`, consider tightening `[a-z0-9]+` to
+  the house naming pattern (e.g. `cr[a-z0-9]+`) to also exclude third-party ACRs. The effect
+  itself (`allowedContainerImagesInKubernetesClusterEffect`) is NOT set by this module — it
+  stays at the ALZ default (Audit); flip it only once violations are zero.
+
+  Backslashes must be escaped for HCL: e.g. `\\.` for a literal dot.
+  EOT
+  default     = "^(mcr\\.microsoft\\.com|[a-z0-9]+\\.azurecr\\.io)/.*$"
+
+  validation {
+    # Reject a malformed regex at plan time (RE2). regexall throws on an invalid pattern.
+    condition     = can(regexall(var.aks_allowed_container_images_regex, ""))
+    error_message = "aks_allowed_container_images_regex must be a valid RE2 regular expression."
+  }
 }
 
 variable "private_dns_zone_resource_group_name" {

@@ -103,6 +103,20 @@ run "happy_secure_defaults" {
     condition     = azurerm_container_registry.this.quarantine_policy_enabled == false
     error_message = "quarantine_policy_enabled must default to false (preview, bricks pulls — CKV_AZURE_166 skipped, see main.tf)."
   }
+
+  # ARM-audience token policy: default false (ALZ-compliant). Provider default is true;
+  # the module MUST set it explicitly so an apply never resets the hardening to true
+  # (Deny-ContainerRegistry-ARM-Audience).
+  assert {
+    condition     = azurerm_container_registry.this.azuread_authentication_as_arm_policy_enabled == false
+    error_message = "azuread_authentication_as_arm_policy_enabled must default to false (secure; provider default true would reopen Deny-ContainerRegistry-ARM-Audience)."
+  }
+
+  # network_rule_bypass_for_tasks_enabled: default false (secure; matches provider default).
+  assert {
+    condition     = azurerm_container_registry.this.network_rule_bypass_for_tasks_enabled == false
+    error_message = "network_rule_bypass_for_tasks_enabled must default to false (secure baseline)."
+  }
 }
 
 # -----------------------------------------------------------------------
@@ -337,4 +351,57 @@ run "validator_private_endpoint_requires_premium" {
   }
 
   expect_failures = [azurerm_container_registry.this]
+}
+
+# -----------------------------------------------------------------------
+# Test 16: happy_arm_audience_and_bypass_overrides — the two new bool toggles
+# wire through when overridden (escape hatch for ARM-audience auth + task bypass).
+# -----------------------------------------------------------------------
+run "happy_arm_audience_and_bypass_overrides" {
+  command = plan
+
+  variables {
+    azuread_authentication_as_arm_policy_enabled = true
+    network_rule_bypass_for_tasks_enabled        = true
+  }
+
+  assert {
+    condition     = azurerm_container_registry.this.azuread_authentication_as_arm_policy_enabled == true
+    error_message = "azuread_authentication_as_arm_policy_enabled must reflect the override."
+  }
+  assert {
+    condition     = azurerm_container_registry.this.network_rule_bypass_for_tasks_enabled == true
+    error_message = "network_rule_bypass_for_tasks_enabled must reflect the override."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 17: happy_role_assignment_mode_abac — opt into ABAC repository permissions.
+# (Default null → provider Legacy is not asserted: an Optional/non-Computed attr
+# with a provider-side default plans to an unknown value under mock_provider.)
+# -----------------------------------------------------------------------
+run "happy_role_assignment_mode_abac" {
+  command = plan
+
+  variables {
+    role_assignment_mode = "AbacRepositoryPermissions"
+  }
+
+  assert {
+    condition     = azurerm_container_registry.this.role_assignment_mode == "AbacRepositoryPermissions"
+    error_message = "role_assignment_mode must wire through when set to ABAC."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 18: validator_role_assignment_mode — invalid value rejected.
+# -----------------------------------------------------------------------
+run "validator_role_assignment_mode" {
+  command = plan
+
+  variables {
+    role_assignment_mode = "Rbac"
+  }
+
+  expect_failures = [var.role_assignment_mode]
 }

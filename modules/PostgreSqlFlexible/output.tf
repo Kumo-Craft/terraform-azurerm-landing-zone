@@ -27,6 +27,11 @@ output "database_ids" {
   value       = { for k, v in azurerm_postgresql_flexible_server_database.this : k => v.id }
 }
 
+output "active_directory_administrator_ids" {
+  description = "Map of administrator key => Entra administrator ID."
+  value       = { for k, v in azurerm_postgresql_flexible_server_active_directory_administrator.this : k => v.id }
+}
+
 output "private_endpoint_ids" {
   description = "Map of private endpoint key => Private Endpoint ID"
   value       = { for k, m in module.private_endpoint : k => m.ids[k] }

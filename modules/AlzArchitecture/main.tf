@@ -75,6 +75,23 @@ module "alz_architecture" {
             resourceGroupLocation = jsonencode({ value = var.location })
           }
         }
+        # MCSB (Deploy-ASC-Monitoring) → règle ensureAllowedContainerImagesInKubernetesCluster.
+        # Le défaut ALZ du regex est ^(.+){0}$ : il ne matche QUE la chaîne vide, donc AUCUNE
+        # image ne peut jamais s'y conformer → la règle est INERTE (violations Gatekeeper qui
+        # ne signalent rien : 58 sur POST-Group). On la rend effective en déclarant les
+        # registres réellement autorisés (MCR + tout *.azurecr.io — via var, mg-lzr = TOUTES
+        # les LZ, donc aucun nom d'ACR en dur). Voir la variable pour la valeur + le durcissement
+        # au motif maison le jour du passage en deny.
+        #   ⚠️ On NE TOUCHE PAS à l'effet (allowedContainerImagesInKubernetesClusterEffect) :
+        #   il reste au défaut ALZ (Audit). Le passer en deny bloquerait des déploiements prod
+        #   tant que des violations subsistent — à faire séparément, violations à zéro.
+        #   ⚠️ On NE TOUCHE PAS non plus à allowedContainerImagesNamespaceExclusion (kube-system,
+        #   gatekeeper-system, azure-arc, azuredefender, mdc, azure-extensions-usage-system).
+        Deploy-ASC-Monitoring = {
+          parameters = {
+            allowedContainerImagesInKubernetesClusterRegex = jsonencode({ value = var.aks_allowed_container_images_regex })
+          }
+        }
       }
     }
     # DDoS (défaut ALZ) : la lib pose Enable-DDoS-VNET — avec un ddosPlan
@@ -111,6 +128,32 @@ module "alz_architecture" {
             ALZMonitorResourceGroupName     = jsonencode({ value = var.amba_resource_group_name })
             ALZMonitorResourceGroupLocation = jsonencode({ value = var.location })
             ALZMonitorResourceGroupTags     = jsonencode({ value = var.amba_resource_group_tags })
+          }
+        }
+        # VMSS Monitoring + Change Tracking : exclure des scopes indésirables (RG
+        # nodes AKS, dont les VMSS sont pilotés par AKS) via not_scopes. Supporté
+        # par avm-ptn-alz 0.21.0 (policy_assignments_to_modify → not_scopes,
+        # variables.tf l.399). Défaut [] = notScopes vide = état actuel (non-breaking).
+        # Avant ce correctif l'input vmss_policy_not_scopes passé par l'unit ALZ
+        # n'était PAS déclaré ici → Terraform le jetait en silence, notScopes restait vide.
+        Deploy-VMSS-Monitoring = {
+          not_scopes = var.vmss_policy_not_scopes
+        }
+        Deploy-VMSS-ChangeTrack = {
+          not_scopes = var.vmss_policy_not_scopes
+        }
+        # Enforce-GR-KeyVault : l'initiative Enforce-Guardrails-KeyVault_20260203 a
+        # deux règles mutuellement insatisfiables à leurs défauts —
+        #   secretsValidityInDays = 90        (Deny via secretsValidPeriod : expiration − création ≤ 90 j)
+        #   minimumSecretsLifeDaysBeforeExpiry = 90   (KvSecretsLifetime : expiration − aujourd'hui > 90 j)
+        # impossible puisque aujourd'hui ≥ création ⇒ (exp − aujourd'hui) ≤ (exp − création) ≤ 90.
+        # On abaisse le seuil "life days" à 30 : la règle devient satisfiable ET utile
+        # (elle passe non conforme 30 j avant expiration = alarme de rotation, pour toutes
+        # les landing zones, sans infra nouvelle). Casse du paramètre vérifiée dans
+        # l'initiative _20260203 (feeds [parameters('minimumSecretsLifeDaysBeforeExpiry')]).
+        Enforce-GR-KeyVault = {
+          parameters = {
+            minimumSecretsLifeDaysBeforeExpiry = jsonencode({ value = 30 })
           }
         }
       }
@@ -162,6 +205,19 @@ module "alz_architecture" {
     ama_vm_insights_data_collection_rule_id     = jsonencode({ value = var.dcr_vm_insights_id })
     ama_change_tracking_data_collection_rule_id = jsonencode({ value = var.dcr_change_tracking_id })
     ama_mdfc_sql_data_collection_rule_id        = jsonencode({ value = var.dcr_defender_sql_id })
+    # AMA user-assigned managed identity — same class of bug as the AMBA VMSS
+    # workaround above: the ALZ lib default value is UNSET, so Deploy-VM-Monitoring,
+    # Deploy-VMSS-Monitoring, Deploy-VM-ChangeTrack, Deploy-VMSS-ChangeTrack and
+    # Deploy-MDFC-DefSQL-AMA keep the lib's PLACEHOLDER UAMI
+    # (/subscriptions/000.../resourceGroups/placeholder/.../placeholder) → the AMA
+    # extension cannot authenticate → no guest telemetry. We wire the REAL UAMI
+    # (reuse var.ama_identity_id, already used for AMBA). The *_name default feeds
+    # DenyAction-DeleteUAMIAMA's resourceName (basename of the UAMI id).
+    #   ama_user_assigned_managed_identity_id   -> userAssignedIdentityResourceId
+    #   ama_user_assigned_managed_identity_name -> resourceName (DenyAction)
+    # Verified against Azure-Landing-Zones-Library platform/alz ref 2026.04.2.
+    ama_user_assigned_managed_identity_id   = jsonencode({ value = var.ama_identity_id })
+    ama_user_assigned_managed_identity_name = jsonencode({ value = basename(var.ama_identity_id) })
     # Friendly RG names for the DINE-created RGs (MDFC export + Service Health).
     # These keys MUST be declared in the lib's alz_policy_default_values.json —
     # unlike default_location (undeclared → provider hard-fails, see #10884).

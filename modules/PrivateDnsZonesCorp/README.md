@@ -8,7 +8,7 @@ Deploys a configurable list of **corporate-internal Azure Private DNS zones** (e
 
 ```hcl
 module "corp_dns_rg" {
-  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
+  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/ResourceGroup?ref=v0.2.9"
 
   subscription_acronym = "con"
   environment          = "nprd"
@@ -19,7 +19,7 @@ module "corp_dns_rg" {
 }
 
 module "corp_dns_zones" {
-  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/PrivateDnsZonesCorp?ref=v0.2.88"
+  source = "github.com/John6810/terraform-azurerm-landing-zone//modules/PrivateDnsZonesCorp?ref=v0.2.88"
 
   resource_group_name = module.corp_dns_rg.name
 
@@ -139,51 +139,3 @@ The DNS zones continue to live under their existing Terraform resource addresses
 - **Scope distinction**: this module is for **corp-internal** zones (custom-named domains). For the standard Azure Private Link zones (`privatelink.vaultcore.azure.net`, `privatelink.blob.core.windows.net`, …) use the `PrivateDnsZones` module which wraps `Azure/avm-ptn-network-private-link-private-dns-zones/azurerm`.
 - **VNet links**: pass each VNet that should resolve these zones. Set `registration_enabled = true` on at most ONE link per zone if you want VMs to auto-register their hostnames (rare for corp zones).
 - **Cross-sub linking**: if the consuming VNets live in a different subscription than the zones, the deployer needs `Private DNS Zone Contributor` on the zone RG.
-
-## Reference
-
-<!-- BEGIN_TF_DOCS -->
-## Requirements
-
-| Name | Version |
-|------|---------|
-| terraform | >= 1.12.0 |
-| azurerm | ~> 4.0 |
-| time | >= 0.9 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| azurerm | ~> 4.0 |
-| time | >= 0.9 |
-
-## Modules
-
-No modules.
-
-## Resources
-
-| Name | Type |
-|------|------|
-| [azurerm_private_dns_zone.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone) | resource |
-| [azurerm_private_dns_zone_virtual_network_link.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone_virtual_network_link) | resource |
-| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| resource\_group\_name | Existing resource group name (caller-provided). PrivateDnsZonesCorp v0.2.9 no longer creates the RG — caller must supply an existing one. | `string` | n/a | yes |
-| tags | Tags to apply | `map(string)` | `{}` | no |
-| virtual\_network\_links | Map of logical name => VNet link config. Each VNet is linked to every zone. | <pre>map(object({<br>    virtual_network_resource_id = string<br>    registration_enabled        = optional(bool, false)<br>  }))</pre> | `{}` | no |
-| zones | Set of corporate private DNS zone names to host on Azure (e.g. ["az.epttst.lu"]). | `set(string)` | `[]` | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| resource\_group\_name | Name of the resource group hosting the zones (passed through from caller) |
-| zone\_ids | Map of zone name => zone resource ID |
-| zone\_names | Set of zone names created |
-<!-- END_TF_DOCS -->

@@ -87,7 +87,19 @@ resource "azurerm_container_registry" "this" {
   anonymous_pull_enabled    = var.anonymous_pull_enabled
   export_policy_enabled     = var.sku == "Premium" ? var.export_policy_enabled : null
 
-  network_rule_bypass_option = var.network_rule_bypass_option
+  network_rule_bypass_option            = var.network_rule_bypass_option
+  network_rule_bypass_for_tasks_enabled = var.network_rule_bypass_for_tasks_enabled
+
+  # ARM-audience token policy. Default false (ALZ-compliant, Deny-ContainerRegistry-
+  # ARM-Audience). The PROVIDER default is true, so NOT setting this (the module's prior
+  # behaviour) reset the hardening to true on every apply — see var for the breaking-change
+  # note. Applies to all SKUs; not ForceNew.
+  azuread_authentication_as_arm_policy_enabled = var.azuread_authentication_as_arm_policy_enabled
+
+  # RBAC model (Legacy vs ABAC repository permissions). Optional/non-Computed with a
+  # provider default of Legacy: null keeps Legacy (non-breaking); "AbacRepositoryPermissions"
+  # opts into per-repository ABAC. Same reset-trap as the ARM-audience policy above.
+  role_assignment_mode = var.role_assignment_mode
 
   dynamic "identity" {
     for_each = length(var.identity_ids) > 0 ? [1] : []

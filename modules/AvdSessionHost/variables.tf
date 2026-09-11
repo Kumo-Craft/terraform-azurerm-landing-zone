@@ -168,8 +168,26 @@ variable "os_disk" {
     caching              = optional(string, "ReadWrite")
     disk_size_gb         = optional(number, 128)
     ephemeral            = optional(bool, true) # D4s_v5 has 150 GiB temp — fits 128 GiB ephemeral
+
+    # Disk Encryption Set for a customer-managed key on the OS disk — see
+    # ../DiskEncryptionSet. null (default) keeps the platform key, which the
+    # ALZ guardrail deny-osanddatadisk-cmk flags.
+    #
+    # ⚠️ The VM must be DEALLOCATED for this to apply — not rebuilt. azurerm
+    # plans an in-place update; Azure refuses to re-encrypt a disk attached to
+    # a running VM. Stop → apply → start. The disk is kept.
+    disk_encryption_set_id = optional(string)
   })
   default = {}
+
+  # An ephemeral OS disk lives on the host's local SSD and is never a managed
+  # disk — there is nothing for a DES to encrypt. Azure rejects the pair; fail
+  # at plan time with a message that says why, rather than at apply with one
+  # that doesn't.
+  validation {
+    condition     = try(var.os_disk.disk_encryption_set_id, null) == null || !try(var.os_disk.ephemeral, true)
+    error_message = "os_disk.disk_encryption_set_id requires ephemeral = false: an ephemeral OS disk is host-local storage, not a managed disk, and cannot be encrypted with a customer-managed key."
+  }
 }
 
 variable "accelerated_networking_enabled" {
@@ -241,6 +259,26 @@ variable "patch_mode" {
   }
 }
 
+variable "patch_assessment_mode" {
+  type        = string
+  description = <<-EOT
+  Override for the patch ASSESSMENT mode (periodic scan for missing updates —
+  independent of patch orchestration, installs nothing). Default null keeps the
+  derived behavior: AutomaticByPlatform when patch_mode = AutomaticByPlatform,
+  ImageDefault otherwise. Set "AutomaticByPlatform" explicitly when an Update
+  Manager periodic-assessment policy (DINE) enforces it on the VMs while
+  patch_mode stays Manual/AutomaticByOS — otherwise Terraform and the policy
+  fight over the attribute on every plan/remediation cycle.
+  Allowed: null, "ImageDefault", "AutomaticByPlatform".
+  EOT
+  default     = null
+
+  validation {
+    condition     = var.patch_assessment_mode == null || contains(["ImageDefault", "AutomaticByPlatform"], var.patch_assessment_mode)
+    error_message = "patch_assessment_mode must be null, 'ImageDefault', or 'AutomaticByPlatform'."
+  }
+}
+
 variable "bypass_platform_safety_checks_on_user_schedule" {
   type        = bool
   description = "When patch_mode = AutomaticByPlatform, set true to defer to a user-defined maintenance configuration (Update Manager) instead of platform-managed safety checks."
@@ -259,6 +297,41 @@ variable "encryption_at_host_enabled" {
   type        = bool
   default     = true
   nullable    = false
+}
+
+###############################################################
+# IDENTITY
+###############################################################
+variable "user_assigned_identity_ids" {
+  type        = list(string)
+  default     = []
+  nullable    = false
+  description = <<-EOT
+    User-assigned managed identities to attach to the session hosts, ON TOP of
+    the always-present SystemAssigned identity.
+
+    WHY THIS EXISTS: the ALZ DINE `Deploy-VM-Monitoring`
+    (AddUserAssignedManagedIdentity_VM) attaches the Azure Monitor Agent
+    identity out-of-band. A VM that declares only SystemAssigned therefore
+    DRIFTS, and the next apply REMOVES the identity — the AMA loses its token
+    and guest telemetry dies silently (Heartbeat/Perf stop, extension still
+    reports Succeeded). Observed 2026-09-02.
+
+    Passing the identity here makes Terraform and the policy converge instead
+    of fighting on every run, and a freshly built host (autoscale scale-out)
+    carries it from creation rather than waiting for the next compliance scan.
+
+    Leave empty when no policy attaches an identity — the VM then keeps a
+    plain SystemAssigned identity.
+  EOT
+
+  validation {
+    condition = alltrue([
+      for id in var.user_assigned_identity_ids :
+      can(regex("^/subscriptions/.+/resourceGroups/.+/providers/Microsoft\\.ManagedIdentity/userAssignedIdentities/.+$", id))
+    ])
+    error_message = "Each entry must be a full User Assigned Identity ARM ID (/subscriptions/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/<name>)."
+  }
 }
 
 ###############################################################

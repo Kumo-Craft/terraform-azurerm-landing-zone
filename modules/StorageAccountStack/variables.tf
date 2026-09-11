@@ -165,6 +165,17 @@ variable "local_user_enabled" {
   default     = false
 }
 
+variable "allowed_copy_scope" {
+  type        = string
+  description = "Restricts where data can be copied FROM this account (`AAD` = same Entra tenant, `PrivateLink` = same private link scope). null leaves it unrestricted, which the ALZ guardrail deny-storage-copyscope flags. See the ../StorageAccount module."
+  default     = null
+
+  validation {
+    condition     = var.allowed_copy_scope == null || contains(["AAD", "PrivateLink"], coalesce(var.allowed_copy_scope, "AAD"))
+    error_message = "allowed_copy_scope must be null, \"AAD\" or \"PrivateLink\"."
+  }
+}
+
 variable "customer_managed_key" {
   description = "Customer-Managed Key (CMK) configuration backed by Azure Key Vault. See the ../StorageAccount module for prerequisites."
   type = object({

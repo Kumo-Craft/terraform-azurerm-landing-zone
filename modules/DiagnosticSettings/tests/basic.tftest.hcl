@@ -10,6 +10,8 @@
 #   7. validator_invalid_target_resource_id — bad ARM ID format → existing validator failure
 #   8. validator_no_destination            — no LAW/storage/EventHub/partner → at-least-one-destination failure
 #   9. validator_invalid_law_id            — workspace GUID instead of ARM resource ID → F-2 failure
+#  10. happy_subscription_scope_activity_log — bare /subscriptions/<guid> target (Activity Log), logs only
+#  11. happy_subscription_scope_with_metrics — subscription target + metrics accepted (no false guard)
 #
 # Run with:
 #   cd modules/DiagnosticSettings
@@ -245,4 +247,57 @@ run "validator_invalid_law_id" {
   }
 
   expect_failures = [var.diagnostic_settings]
+}
+
+# -----------------------------------------------------------------------
+# Test 10: happy_subscription_scope_activity_log — bare /subscriptions/<guid>
+# target (subscription Activity Log), logs only, no metrics. Must plan.
+# -----------------------------------------------------------------------
+run "happy_subscription_scope_activity_log" {
+  command = plan
+
+  variables {
+    diagnostic_settings = {
+      activity = {
+        name                       = "diag-activitylog-to-law"
+        target_resource_id         = "/subscriptions/00000000-0000-0000-0000-000000000000"
+        log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-mgm-prod-gwc/providers/Microsoft.OperationalInsights/workspaces/law-mgm-prod-gwc-01"
+        log_groups                 = ["allLogs"]
+      }
+    }
+  }
+
+  assert {
+    condition     = azurerm_monitor_diagnostic_setting.this["activity"].target_resource_id == "/subscriptions/00000000-0000-0000-0000-000000000000"
+    error_message = "bare subscription target_resource_id must be accepted and wired through."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 11: happy_subscription_scope_with_metrics — a subscription target with
+# metrics set must NOT be blocked. The unified Microsoft.Insights/
+# diagnosticSettings API (2021-05-01-preview) accepts metrics at subscription
+# scope (Microsoft's own AVM module even defaults metricCategories=AllMetrics);
+# metrics are a no-op there, not an error, so the module must not reject them.
+# (Plan-time only; a real apply would confirm ARM acceptance.)
+# -----------------------------------------------------------------------
+run "happy_subscription_scope_with_metrics" {
+  command = plan
+
+  variables {
+    diagnostic_settings = {
+      activity = {
+        name                       = "diag-activitylog-metrics"
+        target_resource_id         = "/subscriptions/00000000-0000-0000-0000-000000000000"
+        log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-mgm-prod-gwc/providers/Microsoft.OperationalInsights/workspaces/law-mgm-prod-gwc-01"
+        log_groups                 = ["allLogs"]
+        metrics                    = ["AllMetrics"]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_monitor_diagnostic_setting.this) == 1
+    error_message = "subscription-scope target with metrics must plan successfully (no false metrics guard)."
+  }
 }
