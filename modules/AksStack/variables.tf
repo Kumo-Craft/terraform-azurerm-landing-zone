@@ -194,6 +194,42 @@ variable "kv_admin_principal_ids" {
   default     = []
 }
 
+variable "kv_network_acls" {
+  description = <<-EOT
+  Optional network ACLs (firewall) for the etcd CMK Key Vault — forwarded verbatim
+  to the ../KeyVault child's `network_acls` (same object shape as KeyVaultStack).
+  Null (default) omits the block.
+
+  NON-REGRESSION (important): `azurerm_key_vault.network_acls` is Optional+Computed
+  (verified in the provider source — v4.81.0 key_vault_resource.go: Optional: true,
+  Computed: true). With this null the KeyVault child emits NO network_acls block, so
+  Terraform keeps whatever ACLs the vault already has — including any set out-of-band
+  (e.g. `az keyvault update`) — an apply does NOT reset an existing firewall.
+
+  Set it to bring the firewall under Terraform, e.g.
+  { default_action = "Deny", bypass = "AzureServices" } to satisfy
+  Enforce-GR-KeyVaultSup0 (which requires networkAcls.defaultAction = Deny, a
+  distinct property from public_network_access_enabled).
+  EOT
+  type = object({
+    default_action = string
+    bypass         = string
+    ip_rules       = optional(list(string), [])
+    subnet_ids     = optional(list(string), [])
+  })
+  default = null
+
+  validation {
+    condition     = var.kv_network_acls == null || contains(["Allow", "Deny"], var.kv_network_acls.default_action)
+    error_message = "kv_network_acls.default_action must be 'Allow' or 'Deny'."
+  }
+
+  validation {
+    condition     = var.kv_network_acls == null || contains(["AzureServices", "None"], var.kv_network_acls.bypass)
+    error_message = "kv_network_acls.bypass must be 'AzureServices' or 'None'."
+  }
+}
+
 variable "kms_v2_enabled" {
   type        = bool
   description = <<-EOT
@@ -275,6 +311,83 @@ variable "upgrade_override_effective_until" {
   type        = string
   default     = null
   description = "Passthrough to Aks: upgrade_override.effective_until (RFC3339). Only used when upgrade_override_enabled = true."
+}
+
+# ── Control-plane diagnostics (passthrough to Aks) ──────────
+# Same types/defaults/validations/descriptions as modules/Aks/variables.tf —
+# kept identical so backward compatibility (No changes plan) is preserved.
+variable "diagnostic_log_analytics_destination_type" {
+  type        = string
+  default     = null
+  description = "Destination table layout for the AKS control-plane diagnostic setting. Either \"Dedicated\" (resource-specific tables AKSAudit / AKSAuditAdmin / AKSControlPlane — RECOMMENDED for new deployments per MS Learn CAF, and required to place kube-audit-admin on the Basic plan) or \"AzureDiagnostics\" (legacy shared table). Default null = provider-managed (keeps the existing behaviour — SWITCHING to Dedicated is an in-place change that sends NEW logs to the AKS* tables; data already in AzureDiagnostics stays there and existing KQL must be rewritten)."
+
+  validation {
+    condition     = var.diagnostic_log_analytics_destination_type == null || contains(["Dedicated", "AzureDiagnostics"], var.diagnostic_log_analytics_destination_type)
+    error_message = "diagnostic_log_analytics_destination_type, when set, must be either \"Dedicated\" or \"AzureDiagnostics\"."
+  }
+}
+
+variable "diagnostic_log_categories" {
+  type = list(string)
+  default = [
+    "kube-apiserver",
+    "kube-audit-admin",
+    "kube-controller-manager",
+    "kube-scheduler",
+    "cluster-autoscaler",
+    "guard",
+  ]
+  nullable    = false
+  description = "AKS control-plane log categories enabled on the diagnostic setting. Default = the 6 historically-enabled categories (backward compatible). Note: kube-audit (full) is intentionally omitted in favour of kube-audit-admin; add it only if you accept its very high volume/cost."
+}
+
+# ── Node/data disk CMK + managed Prometheus (passthrough to Aks) ──
+# Previously not exposed by the stack (wrapper drift); added so consumers can
+# reach these Aks features. Both defaults match Aks -> No changes for existing
+# consumers.
+variable "disk_encryption_set_id" {
+  type        = string
+  default     = null
+  description = <<-EOT
+  Resource ID of a customer-managed Disk Encryption Set (DES) used to encrypt
+  the AKS node OS and data disks (and their caches) with a customer-managed key
+  (BYOK). Resolves Checkov CKV_AZURE_117.
+
+  Null (default) = Azure platform-managed keys (still encrypted at rest, but
+  Microsoft-managed). To satisfy CKV_AZURE_117 / BYOK, pass the ID of a DES you
+  provision OUTSIDE this module (Key Vault + key with soft-delete & purge
+  protection, DES with a managed identity, and Reader access for the AKS cluster
+  identity on the DES). This module intentionally does NOT create the DES — it is
+  a cross-cutting dependency shared with other resources.
+
+  Per Microsoft Learn (https://learn.microsoft.com/azure/aks/azure-disk-customer-managed-keys):
+  OS-disk CMK encryption can only be enabled at cluster CREATION time. The DES
+  must be in the same region as the cluster. Changing this forces a new cluster
+  (ForceNew in the azurerm schema).
+  EOT
+}
+
+variable "monitor_metrics" {
+  description = <<-EOT
+  Configuration for the managed Prometheus (ama-metrics) monitor_metrics block.
+  When non-null, the block is emitted; when null, the block is omitted entirely.
+
+  - `annotations_allowed` - (Optional) Comma-separated list of Kubernetes annotation
+    keys that are allowed as metric labels. Restricting this list avoids high-
+    cardinality label explosion on large clusters.
+  - `labels_allowed` - (Optional) Comma-separated list of Kubernetes label keys
+    allowed as metric labels. Same cardinality rationale.
+
+  Set to `{}` to enable the addon with no annotation/label filter (equivalent to
+  the former hardcoded `monitor_metrics {}` empty block). Set to null to disable
+  the monitor_metrics block entirely (e.g. when a customer-managed Prometheus
+  scrape pipeline replaces the managed addon).
+  EOT
+  type = object({
+    annotations_allowed = optional(string)
+    labels_allowed      = optional(string)
+  })
+  default = {}
 }
 
 variable "node_os_upgrade_channel" {

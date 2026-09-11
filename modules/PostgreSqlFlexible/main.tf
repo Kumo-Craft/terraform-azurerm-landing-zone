@@ -34,6 +34,10 @@ locals {
   name = var.name != null ? var.name : "psql-${join("-", module.naming["this"].suffix)}"
 }
 
+# Fallback tenant for Entra administrators when neither the per-admin
+# tenant_id nor authentication.tenant_id is supplied.
+data "azurerm_client_config" "current" {}
+
 ###############################################################
 # RESOURCE: PostgreSQL Flexible Server
 ###############################################################
@@ -156,6 +160,34 @@ resource "azurerm_postgresql_flexible_server_database" "this" {
   # Databases hold data — guard against accidental destroy.
   lifecycle {
     prevent_destroy = true
+  }
+}
+
+###############################################################
+# RESOURCE: Entra (Azure AD) administrators
+# Required to actually log in under Entra-only auth
+# (authentication.password_auth_enabled = false), otherwise the
+# server is created with no usable administrator.
+###############################################################
+resource "azurerm_postgresql_flexible_server_active_directory_administrator" "this" {
+  for_each = var.active_directory_administrators
+
+  server_name         = azurerm_postgresql_flexible_server.this.name
+  resource_group_name = var.resource_group_name
+  object_id           = each.value.object_id
+  principal_name      = each.value.principal_name
+  principal_type      = each.value.principal_type
+  tenant_id = coalesce(
+    each.value.tenant_id,
+    try(var.authentication.tenant_id, null),
+    data.azurerm_client_config.current.tenant_id,
+  )
+
+  lifecycle {
+    precondition {
+      condition     = var.authentication != null && try(var.authentication.active_directory_auth_enabled, false)
+      error_message = "enable authentication.active_directory_auth_enabled to assign an AD administrator."
+    }
   }
 }
 

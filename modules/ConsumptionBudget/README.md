@@ -1,8 +1,29 @@
 # ConsumptionBudget
 
-A **Cost Management budget** scoped to a **resource group**, with **Actual + Forecasted** threshold notifications to emails / Action Groups / RBAC roles. A soft cost guard-rail: it **never stops consumption** (unlike a hard daily cap) — it only notifies — which is the Microsoft-recommended way to control cost without blinding a workload during a spike.
+A **Cost Management budget** scoped to a **resource group** OR a **subscription** (pick exactly one), with **Actual + Forecasted** threshold notifications to emails / Action Groups / RBAC roles. A soft cost guard-rail: it **never stops consumption** (unlike a hard daily cap) — it only notifies — which is the Microsoft-recommended way to control cost without blinding a workload during a spike.
 
-Wraps [`azurerm_consumption_budget_resource_group`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group) (`Microsoft.Consumption` 2019-10-01).
+Wraps [`azurerm_consumption_budget_resource_group`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group) and [`azurerm_consumption_budget_subscription`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_subscription) (`Microsoft.Consumption` 2019-10-01) — **one module, two mutually-exclusive resources** so naming / notifications / filter / lock stay identical across scopes.
+
+## Scope — set EXACTLY one
+
+Provide **either** `resource_group_id` **or** `subscription_id`, never both, never neither (enforced by an XOR validation). `subscription_id` accepts a **bare GUID** or a full `/subscriptions/<guid>` path (normalized internally). A subscription-level budget catches spend that no single RG budget would — e.g. a Log Analytics workspace drifting to 485 $/mo unnoticed.
+
+```hcl
+# Subscription-scoped budget (bare GUID accepted)
+module "sub_budget" {
+  source = "../ConsumptionBudget"
+
+  subscription_acronym = "con"
+  environment          = "prod"
+  region_code          = "gwc"
+  workload             = "subscription"
+
+  subscription_id = "00000000-0000-0000-0000-000000000000"
+  amount          = 5000
+  start_date      = "2026-07-01T00:00:00Z"
+  notifications   = [{ threshold = 90, threshold_type = "Forecasted", contact_emails = ["finops@example.com"] }]
+}
+```
 
 ## Why (Microsoft guidance)
 
@@ -18,7 +39,7 @@ Grounded in [Create and manage budgets](https://learn.microsoft.com/azure/cost-m
 
 ```hcl
 module "budget" {
-  source = "github.com/Kumo-Craft/terraform-azurerm-landing-zone//modules/ConsumptionBudget?ref=v0.3.0"
+  source = "git::https://dev.azure.com/azure-forge/Modules/_git/Modules//modules/ConsumptionBudget?ref=v0.3.0"
 
   subscription_acronym = "con"
   environment          = "prod"
@@ -72,7 +93,8 @@ Follows the repo convention via the [`Naming`](../Naming/) submodule: `bdg-{acr}
 | `environment` | `string` | `null` | Naming component (`prod`/`nprd`). |
 | `region_code` | `string` | `null` | Naming component (e.g. `gwc`). |
 | `workload` | `string` | `"budget"` | Naming suffix segment. |
-| `resource_group_id` | `string` | — (required) | Full ARM ID of the scoped resource group. |
+| `resource_group_id` | `string` | `null` | RG-scope: full ARM ID. **XOR** with `subscription_id`. |
+| `subscription_id` | `string` | `null` | Subscription-scope: bare GUID or `/subscriptions/<guid>`. **XOR** with `resource_group_id`. |
 | `amount` | `number` | — (required) | Budget amount (> 0). |
 | `time_grain` | `string` | `"Monthly"` | Reset period (see above). ForceNew. |
 | `start_date` | `string` | — (required) | First-of-month UTC ISO-8601 (`YYYY-MM-01T00:00:00Z`). ForceNew. |
@@ -100,75 +122,21 @@ At least one of `contact_emails` / `contact_groups` / `contact_roles` per notifi
 
 | Name | Description |
 |------|-------------|
-| `id` | Budget resource ID. |
+| `id` | Budget resource ID (whichever scope is in use). |
 | `name` | Full budget name. |
-| `resources` | Full budget resource object (mirrors sibling modules). |
+| `resources` | The **resource-group** budget object (null when subscription-scoped). |
+| `subscription_budget` | The **subscription** budget object (null when RG-scoped). |
 | `lock_ids` | Map of lock key => lock ID (empty when `lock` is null). |
 
 ## Notes
 
-- **No tags server-side.** `azurerm_consumption_budget_resource_group` has no `tags` argument — the `tags` variable is accepted for interface parity but applied to nothing.
-- **ForceNew fields.** `resource_group_id`, `time_grain` and `start_date` are immutable — changing any recreates the budget.
-- **Subscription-scope budgets** are out of scope here (this module is RG-scoped); use `azurerm_consumption_budget_subscription` in a dedicated module if needed.
+- **No tags server-side.** Neither `azurerm_consumption_budget_*` resource has a `tags` argument — the `tags` variable is accepted for interface parity but applied to nothing.
+- **ForceNew fields.** `resource_group_id` / `subscription_id`, `time_grain` and `start_date` are immutable — changing any recreates the budget. In particular, **never derive `start_date` from `timestamp()`** — it would recreate the budget on every plan.
+- **⚠️ `start_date` in the past must fall within the current `time_grain` period** (Azure constraint, *not* checkable at plan time — it depends on the apply date). With `Monthly` grain, a `start_date` in an already-elapsed month can be **rejected by the service at apply**. Use the first day of the current (or a future) period.
+- **Each notification needs a recipient** — at least one of `contact_emails` / `contact_groups` / `contact_roles` (validated; Azure rejects an all-empty notification). Applies to both scopes.
+- **`notification` is a set** — two notification blocks with identical field values collapse into one (Terraform/Azure set dedup); vary the threshold/type to keep them distinct.
+- **Lock naming.** When `lock.name` is supplied, the created lock is named `"${lock.name}-budget"` (a `-budget` suffix is appended); leave `lock.name` null to use `../ResourceLock`'s derived default.
 
 ## Testing
 
-`tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: derived naming, name override, multi-notification (Actual+Forecasted), filter block, optional lock, and validators (empty/no-contact notifications, bad start_date/time_grain/rg_id). Run: `terraform init -backend=false && terraform test`.
-
-## Reference
-
-<!-- BEGIN_TF_DOCS -->
-## Requirements
-
-| Name | Version |
-|------|---------|
-| terraform | >= 1.12.0 |
-| azurerm | ~> 4.0 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| azurerm | ~> 4.0 |
-
-## Modules
-
-| Name | Source | Version |
-|------|--------|---------|
-| lock | ../ResourceLock | n/a |
-| naming | ../Naming | n/a |
-
-## Resources
-
-| Name | Type |
-|------|------|
-| [azurerm_consumption_budget_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group) | resource |
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| amount | Budget amount in the billing account currency. | `number` | n/a | yes |
-| notifications | Threshold notifications. 1 to 5 blocks. threshold is a percentage in (0, 1000]. | <pre>list(object({<br>    enabled        = optional(bool, true)<br>    threshold      = number<br>    operator       = optional(string, "GreaterThan") # GreaterThan | EqualTo | GreaterThanOrEqualTo<br>    threshold_type = optional(string, "Actual")      # Actual | Forecasted<br>    contact_emails = optional(list(string), [])<br>    contact_groups = optional(list(string), []) # Action Group resource IDs<br>    contact_roles  = optional(list(string), []) # RBAC role names: Owner/Contributor/Reader<br>  }))</pre> | n/a | yes |
-| resource\_group\_id | Full ARM ID of the resource group the budget is scoped to (/subscriptions/../resourceGroups/..). | `string` | n/a | yes |
-| start\_date | Budget start date, ISO-8601, first day of a month, UTC (e.g. 2026-07-01T00:00:00Z). Immutable once set; must be <= 12 months in the past (>= 2017-06-01). | `string` | n/a | yes |
-| end\_date | Optional budget end date (ISO-8601). Null = provider default (~10y after start). | `string` | `null` | no |
-| environment | Environment code (prod / nprd). | `string` | `null` | no |
-| filter | Optional budget filter (restrict to dimensions/tags). Null = whole RG scope. dimension/tag operator must be 'In'. | <pre>object({<br>    dimensions = optional(list(object({<br>      name     = string<br>      operator = optional(string, "In")<br>      values   = list(string)<br>    })), [])<br>    tags = optional(list(object({<br>      name     = string<br>      operator = optional(string, "In")<br>      values   = list(string)<br>    })), [])<br>  })</pre> | `null` | no |
-| lock | Optional resource lock (CanNotDelete / ReadOnly) applied to the budget. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
-| name | Explicit name override (escape hatch). If null, derived via ../Naming (bdg-{acr}-{env}-{region}-{workload}). | `string` | `null` | no |
-| region\_code | Region code (e.g. gwc). | `string` | `null` | no |
-| subscription\_acronym | Subscription acronym (e.g. mgm, con, api). | `string` | `null` | no |
-| tags | Tags. NOTE: azurerm\_consumption\_budget\_* has no tags argument (budgets don't persist tags server-side); kept for module-interface consistency, not applied to any resource. | `map(string)` | `{}` | no |
-| time\_grain | Reset period. One of: Monthly, Quarterly, Annually, BillingMonth, BillingQuarter, BillingAnnual. Immutable (ForceNew). | `string` | `"Monthly"` | no |
-| workload | Workload name (naming suffix segment). | `string` | `"budget"` | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| id | Resource ID of the budget. |
-| lock\_ids | Map of lock key => management lock ID (empty map when var.lock is null). |
-| name | Full budget name. |
-| resources | Full budget resource object. |
-<!-- END_TF_DOCS -->
+`tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: derived naming, name override, multi-notification (Actual+Forecasted), filter block, optional lock (both scopes), subscription scope (bare GUID + full path, normalization asserted), and validators (empty/no-contact notifications, bad start_date/time_grain/rg_id, XOR both-set and neither-set). Run: `terraform init -backend=false && terraform test`.

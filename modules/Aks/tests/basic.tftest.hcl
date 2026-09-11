@@ -499,3 +499,60 @@ run "upgrade_override_enabled_default_until_null" {
     error_message = "force_upgrade_enabled must default to false when enabled without force."
   }
 }
+
+# -----------------------------------------------------------------------
+# Test 22: diag_defaults — with a LAW, the diagnostic setting is planned with
+# the 6 historical categories and NO destination_type override (backward
+# compatible: legacy AzureDiagnostics behaviour is preserved).
+# -----------------------------------------------------------------------
+run "diag_defaults" {
+  command = plan
+
+  variables {
+    log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-api-prod-gwc-management/providers/Microsoft.OperationalInsights/workspaces/law-api-prod-gwc-01"
+  }
+
+  assert {
+    condition     = length(azurerm_monitor_diagnostic_setting.this) == 1
+    error_message = "Diagnostic setting must be planned when log_analytics_workspace_id is set."
+  }
+  assert {
+    condition     = length(azurerm_monitor_diagnostic_setting.this[0].enabled_log) == 6
+    error_message = "Default must enable the 6 historical log categories."
+  }
+  # Note: log_analytics_destination_type is a computed attribute (unknown at
+  # plan time under a mocked provider), so its value can't be asserted here.
+  # Backward compatibility (null default => no destination_type sent) is
+  # guaranteed by the module wiring + terraform validate.
+}
+
+# -----------------------------------------------------------------------
+# Test 23: diag_dedicated — opt-in resource-specific tables.
+# -----------------------------------------------------------------------
+run "diag_dedicated" {
+  command = plan
+
+  variables {
+    log_analytics_workspace_id                = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-api-prod-gwc-management/providers/Microsoft.OperationalInsights/workspaces/law-api-prod-gwc-01"
+    diagnostic_log_analytics_destination_type = "Dedicated"
+    diagnostic_log_categories                 = ["kube-audit-admin", "kube-apiserver"]
+  }
+
+  assert {
+    condition     = length(azurerm_monitor_diagnostic_setting.this[0].enabled_log) == 2
+    error_message = "Custom category list must be honoured."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 24: validator_diag_dest_type — invalid destination_type rejected.
+# -----------------------------------------------------------------------
+run "validator_diag_dest_type" {
+  command = plan
+
+  variables {
+    diagnostic_log_analytics_destination_type = "Bogus"
+  }
+
+  expect_failures = [var.diagnostic_log_analytics_destination_type]
+}

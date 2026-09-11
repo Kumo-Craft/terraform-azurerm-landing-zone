@@ -134,8 +134,11 @@ resource "azurerm_windows_virtual_machine" "this" {
   license_type = var.license_type
 
   # Patch orchestration via Update Manager (modern AVD pattern).
+  # Assessment mode: explicit override wins (var.patch_assessment_mode) — lets a
+  # consumer align with an Update Manager periodic-assessment DINE while keeping
+  # patch_mode Manual/AutomaticByOS. Falls back to the derived F-1 behavior.
   patch_mode                                             = var.patch_mode
-  patch_assessment_mode                                  = var.patch_mode == "AutomaticByPlatform" ? "AutomaticByPlatform" : "ImageDefault" # F-1
+  patch_assessment_mode                                  = coalesce(var.patch_assessment_mode, var.patch_mode == "AutomaticByPlatform" ? "AutomaticByPlatform" : "ImageDefault") # F-1
   bypass_platform_safety_checks_on_user_schedule_enabled = var.patch_mode == "AutomaticByPlatform" ? var.bypass_platform_safety_checks_on_user_schedule : null
   hotpatching_enabled                                    = var.hotpatching_enabled
 
@@ -148,6 +151,29 @@ resource "azurerm_windows_virtual_machine" "this" {
     caching              = var.os_disk.ephemeral ? "ReadOnly" : var.os_disk.caching
     storage_account_type = var.os_disk.storage_account_type
     disk_size_gb         = var.os_disk.disk_size_gb
+
+    # CMK on the OS disk — see ../DiskEncryptionSet.
+    #
+    # ⚠️ THE VM MUST BE DEALLOCATED FOR THIS TO APPLY. Not rebuilt —
+    # deallocated. azurerm plans this as an in-place update (verified on a real
+    # plan: `~ os_disk { + disk_encryption_set_id }`, no replacement). Azure is
+    # what refuses the change on a running VM: "Your existing disks must not be
+    # attached to a running VM in order for you to encrypt them".
+    #   → learn.microsoft.com/azure/virtual-machines/disks-enable-customer-managed-keys-portal
+    #
+    # Procedure: stop the VM → apply → start. The disk is kept; only the key
+    # that encrypts it changes. Later key ROTATION is transparent — "Virtual
+    # Machines aren't rebooted during automatic key rotation".
+    #
+    # ⚠️ Incompatible with ephemeral OS disks: an ephemeral disk lives on the
+    # host's local SSD and is never a managed disk, so there is nothing for a
+    # DES to encrypt. Azure rejects the pair; the validation below catches it
+    # at plan time.
+    #
+    # ⚠️ Trusted Launch (what these hosts use) takes disk_encryption_set_id.
+    # secure_vm_disk_encryption_set_id is for CONFIDENTIAL VMs only — using
+    # it here makes the VM unbootable.
+    disk_encryption_set_id = var.os_disk.disk_encryption_set_id
 
     dynamic "diff_disk_settings" {
       for_each = var.os_disk.ephemeral ? [1] : []
@@ -187,8 +213,19 @@ resource "azurerm_windows_virtual_machine" "this" {
     }
   }
 
+  # SystemAssigned is ALWAYS on — RBAC grants target it (cf. output principal_ids),
+  # and identity[0] must stay the system principal for that output to hold.
+  #
+  # UserAssigned is added when the caller passes identities. This is not
+  # decorative: the ALZ DINE AddUserAssignedManagedIdentity_VM attaches the AMA
+  # identity out-of-band, so a VM declaring only SystemAssigned drifts and the
+  # next apply REMOVES it — the agent loses its token and guest telemetry dies
+  # silently (2026-09-02: plan showed `- uai-mgm-prod-gwc-01-ama` and
+  # `type = "SystemAssigned, UserAssigned" -> "SystemAssigned"` on both hosts).
+  # Declaring it makes Terraform converge with the policy instead of fighting it.
   identity {
-    type = "SystemAssigned"
+    type         = length(var.user_assigned_identity_ids) > 0 ? "SystemAssigned, UserAssigned" : "SystemAssigned"
+    identity_ids = var.user_assigned_identity_ids
   }
 
   tags = merge(var.tags, local.created_on_tag) # F-4
@@ -269,6 +306,25 @@ resource "azurerm_virtual_machine_extension" "avd_dsc" {
       RegistrationInfoToken = var.hostpool_registration_token
     }
   })
+
+  # Le token d'enregistrement TOURNE (time_rotating cote AvdHostPool). Sans ce
+  # ignore_changes, chaque rotation reecrit protected_settings -> Terraform
+  # RE-APPLIQUE le DSC sur un host DEJA enregistre -> l'operation ARM PEND
+  # indefiniment (VM bloquee en provisioningState=Updating ; constate 2 fois le
+  # 2026-08-31, apply en timeout apres 30 min, puis ~90 min pour que la
+  # plateforme libere le verrou).
+  #
+  # C'est SANS consequence fonctionnelle : le token ne sert QU'A
+  # l'enregistrement INITIAL. Une fois enregistre, l'agent parle au broker via
+  # sa device identity. Un NOUVEAU host, lui, est cree avec le token courant
+  # (l'extension est creee, pas mise a jour) -> il recoit toujours un token valide.
+  #
+  # Pour forcer une re-registration (agent corrompu, changement de pool), passer
+  # par un -replace explicite de cette extension : cf. le runbook
+  # registration-token-rotation.
+  lifecycle {
+    ignore_changes = [protected_settings]
+  }
 
   depends_on = [azurerm_virtual_machine_extension.entra_join]
   tags       = merge(var.tags, local.created_on_tag) # F-4

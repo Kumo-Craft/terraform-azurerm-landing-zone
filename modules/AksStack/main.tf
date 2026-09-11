@@ -111,6 +111,13 @@ module "kv" {
   purge_protection_enabled      = true
   public_network_access_enabled = false
 
+  # Firewall — forwarded from the caller (null by default). Because
+  # azurerm_key_vault.network_acls is Optional+Computed, a null omits the block
+  # and preserves any ACLs already on the vault (incl. out-of-band); a non-null
+  # value brings the firewall under Terraform (e.g. default_action = "Deny" to
+  # satisfy Enforce-GR-KeyVaultSup0).
+  network_acls = var.kv_network_acls
+
   role_assignments = {
     for idx, pid in var.kv_admin_principal_ids : "admin-${idx}" => {
       role_definition_id_or_name = "Key Vault Administrator"
@@ -307,6 +314,15 @@ module "aks" {
   # deploy a ContainerInsightsCollector module to add custom streams.
   log_analytics_workspace_id = var.log_analytics_workspace_id
   enable_container_insights  = var.enable_container_insights
+
+  # Control-plane diagnostic setting (cost lever: Dedicated tables + Basic plan).
+  # Defaults preserve the legacy behaviour (No changes for existing consumers).
+  diagnostic_log_analytics_destination_type = var.diagnostic_log_analytics_destination_type
+  diagnostic_log_categories                 = var.diagnostic_log_categories
+
+  # Managed Prometheus label filtering + node/data-disk CMK (BYOK).
+  monitor_metrics        = var.monitor_metrics
+  disk_encryption_set_id = var.disk_encryption_set_id
 
   # Secrets Store CSI Driver (azure-keyvault-secrets-provider addon).
   # Apps consume KV secrets via SecretProviderClass + Workload Identity

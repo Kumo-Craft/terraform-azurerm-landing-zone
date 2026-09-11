@@ -150,6 +150,57 @@ run "happy_with_lock_and_rbac" {
   }
 }
 
+# 7b. Entra admin assigned (requires AAD auth enabled)
+run "happy_ad_admin" {
+  command = plan
+
+  variables {
+    authentication = {
+      active_directory_auth_enabled = true
+      password_auth_enabled         = false
+      tenant_id                     = "00000000-0000-0000-0000-000000000000"
+    }
+    administrator_login    = null
+    administrator_password = null
+    active_directory_administrators = {
+      dba = {
+        object_id      = "00000000-0000-0000-0000-00000000000a"
+        principal_name = "grp-psql-admins-example"
+        principal_type = "Group"
+        tenant_id      = "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_postgresql_flexible_server_active_directory_administrator.this) == 1
+    error_message = "One AD administrator must be planned."
+  }
+  assert {
+    condition     = azurerm_postgresql_flexible_server_active_directory_administrator.this["dba"].principal_type == "Group"
+    error_message = "principal_type must wire through."
+  }
+}
+
+# 7c. AD admin without AAD auth enabled → precondition failure
+run "validator_ad_admin_requires_auth" {
+  command = plan
+
+  variables {
+    authentication = null
+    active_directory_administrators = {
+      dba = {
+        object_id      = "00000000-0000-0000-0000-00000000000a"
+        principal_name = "grp-psql-admins-example"
+        principal_type = "Group"
+        tenant_id      = "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+
+  expect_failures = [azurerm_postgresql_flexible_server_active_directory_administrator.this]
+}
+
 # 8. naming XOR failure
 run "validator_naming_xor_fails" {
   command = plan

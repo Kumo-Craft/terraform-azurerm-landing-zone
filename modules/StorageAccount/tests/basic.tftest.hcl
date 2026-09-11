@@ -251,3 +251,56 @@ run "with_containers_and_file_shares_happy" {
     error_message = "Must plan exactly one file share."
   }
 }
+
+# ---------------------------------------------------------------------
+# Test 10: allowed_copy_scope — unset by default, settable to AAD.
+#
+# Unset means "unrestricted", which is what the ALZ guardrail
+# deny-storage-copyscope denies (its allowedCopyScope parameter defaults to
+# AAD). The module keeps null as the default so existing accounts don't
+# silently change behaviour; callers with no cross-tenant copy use case set
+# it explicitly.
+# ---------------------------------------------------------------------
+run "allowed_copy_scope_unset_by_default" {
+  command = plan
+
+  variables {
+    name                = "stcopyscopedef01"
+    location            = "germanywestcentral"
+    resource_group_name = "rg-test"
+  }
+
+  assert {
+    condition     = azurerm_storage_account.this.allowed_copy_scope == null
+    error_message = "allowed_copy_scope must stay unset unless the caller asks for it."
+  }
+}
+
+run "allowed_copy_scope_aad_happy" {
+  command = plan
+
+  variables {
+    name                = "stcopyscopeaad01"
+    location            = "germanywestcentral"
+    resource_group_name = "rg-test"
+    allowed_copy_scope  = "AAD"
+  }
+
+  assert {
+    condition     = azurerm_storage_account.this.allowed_copy_scope == "AAD"
+    error_message = "allowed_copy_scope = AAD must reach the storage account."
+  }
+}
+
+run "allowed_copy_scope_invalid_fails" {
+  command = plan
+
+  variables {
+    name                = "stcopyscopebad01"
+    location            = "germanywestcentral"
+    resource_group_name = "rg-test"
+    allowed_copy_scope  = "Tenant"
+  }
+
+  expect_failures = [var.allowed_copy_scope]
+}

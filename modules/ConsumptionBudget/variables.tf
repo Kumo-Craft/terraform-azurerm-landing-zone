@@ -55,6 +55,7 @@ variable "workload" {
   description = "Workload name (naming suffix segment)."
   type        = string
   default     = "budget"
+  nullable    = false
 
   validation {
     condition     = can(regex("^[a-z][a-z0-9_-]{0,30}$", var.workload))
@@ -66,18 +67,39 @@ variable "workload" {
 # BUDGET
 ###############################################################
 variable "resource_group_id" {
-  description = "Full ARM ID of the resource group the budget is scoped to (/subscriptions/../resourceGroups/..)."
+  description = "Resource-group scope: full ARM ID (/subscriptions/../resourceGroups/..). Mutually exclusive with subscription_id — set EXACTLY one."
   type        = string
+  default     = null
+  nullable    = true
 
   validation {
-    condition     = can(regex("^/subscriptions/.+/resourceGroups/.+$", var.resource_group_id))
+    condition     = var.resource_group_id == null || can(regex("^/subscriptions/.+/resourceGroups/.+$", var.resource_group_id))
     error_message = "resource_group_id must be a full resource group ARM ID."
+  }
+
+  # XOR: exactly one of resource_group_id / subscription_id.
+  validation {
+    condition     = (var.resource_group_id != null) != (var.subscription_id != null)
+    error_message = "Set EXACTLY ONE of resource_group_id (RG-scoped budget) or subscription_id (subscription-scoped budget) — not both, not neither."
+  }
+}
+
+variable "subscription_id" {
+  description = "Subscription scope. Accepts either a bare GUID or the full /subscriptions/<guid> path (normalized in main.tf). Mutually exclusive with resource_group_id — set EXACTLY one."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.subscription_id == null || can(regex("^(/subscriptions/)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.subscription_id))
+    error_message = "subscription_id must be a GUID or a /subscriptions/<guid> path."
   }
 }
 
 variable "amount" {
   description = "Budget amount in the billing account currency."
   type        = number
+  nullable    = false
 
   validation {
     condition     = var.amount > 0
@@ -97,8 +119,18 @@ variable "time_grain" {
 }
 
 variable "start_date" {
-  description = "Budget start date, ISO-8601, first day of a month, UTC (e.g. 2026-07-01T00:00:00Z). Immutable once set; must be <= 12 months in the past (>= 2017-06-01)."
+  description = <<-EOT
+  Budget start date, ISO-8601, first day of a month, UTC (e.g. 2026-07-01T00:00:00Z).
+  Immutable once set (ForceNew) — NEVER derive it from timestamp(), or the budget is
+  recreated on every plan.
+
+  ⚠️ Azure constraint NOT checkable at plan time (depends on the apply date): a PAST
+  start_date must fall within the current time_grain period — e.g. with Monthly grain,
+  a start_date in an already-elapsed month can be rejected by the service. Pick the
+  first day of the current (or a future) period. Must also be >= 2017-06-01.
+  EOT
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^\\d{4}-\\d{2}-01T00:00:00Z$", var.start_date))
@@ -107,14 +139,20 @@ variable "start_date" {
 }
 
 variable "end_date" {
-  description = "Optional budget end date (ISO-8601). Null = provider default (~10y after start)."
+  description = "Optional budget end date (ISO-8601 UTC). Null = provider default (~10y after start)."
   type        = string
   default     = null
   nullable    = true
+
+  validation {
+    condition     = var.end_date == null || can(regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", var.end_date))
+    error_message = "end_date, when set, must be ISO-8601 UTC (YYYY-MM-DDThh:mm:ssZ)."
+  }
 }
 
 variable "notifications" {
-  description = "Threshold notifications. 1 to 5 blocks. threshold is a percentage in (0, 1000]."
+  description = "Threshold notifications. 1 to 5 blocks (Azure Portal limit; kept as a conservative guard). threshold is a percentage in (0, 1000]. Each block needs >=1 contact (email/group/role). Note: it's a set-nesting block — two identical notifications collapse into one."
+  nullable    = false
   type = list(object({
     enabled        = optional(bool, true)
     threshold      = number
@@ -187,7 +225,9 @@ variable "lock" {
   nullable = true
 
   validation {
-    condition     = var.lock == null || contains(["CanNotDelete", "ReadOnly"], coalesce(var.lock != null ? var.lock.kind : null, "CanNotDelete"))
+    # kind is a non-optional field of the object, so it's never null when lock is
+    # set — no coalesce guard needed.
+    condition     = var.lock == null || contains(["CanNotDelete", "ReadOnly"], var.lock.kind)
     error_message = "lock.kind must be 'CanNotDelete' or 'ReadOnly'."
   }
 }

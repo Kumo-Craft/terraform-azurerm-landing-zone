@@ -3,14 +3,18 @@
 # Mocks azurerm + time; the Naming submodule's random provider runs for real.
 #
 # Covers:
-#   1. happy_default        — naming, kind, streams, MS counter/event defaults, no associations
-#   2. with_session_hosts   — one association per session host
+#   1. happy_default        — naming, kind, streams, MS counter/event defaults, no associations,
+#                             DCE naming + private-only access
+#   2. with_session_hosts   — one DCR association AND one config-access association per host
 #   3. name_override        — var.name wins
+#   3b. dce_name_override   — var.data_collection_endpoint_name wins
 #   4. with_lock            — optional lock
 #   5. counter_override     — callers can trim/replace the counter set
 #   6. validator_bad_law_id            — not a LAW ARM id → fail
 #   7. validator_empty_perf_counters   — [] → fail
 #   8. validator_bad_sampling_frequency— 3600s → fail
+#   8b. counters_single_instance_objects_carry_no_wildcard — Memory / Terminal
+#       Services sans (*), PhysicalDisk / RemoteFX avec
 #   9. validator_empty_event_logs      — [] → fail
 #
 # Run with:
@@ -90,6 +94,22 @@ run "happy_default" {
     condition     = length(azurerm_monitor_data_collection_rule_association.avd) == 0
     error_message = "No associations by default (session_host_ids = [] so the DCR can be created before the hosts)."
   }
+
+  # --- DCE (configuration access behind Private Link) ---
+  assert {
+    condition     = azurerm_monitor_data_collection_endpoint.avd.name == "dce-avd-prod-gwc-01"
+    error_message = "DCE name must derive as dce-{acr}-{env}-{region}-{workload} — NO -avdinsights component (the endpoint is regional and data-set agnostic)."
+  }
+
+  assert {
+    condition     = azurerm_monitor_data_collection_endpoint.avd.public_network_access_enabled == false
+    error_message = "The DCE must stay private: a publicly reachable endpoint defeats the only reason it exists (AMPLS PrivateOnly)."
+  }
+
+  assert {
+    condition     = length(azurerm_monitor_data_collection_rule_association.config_access) == 0
+    error_message = "No config-access association by default (session_host_ids = [])."
+  }
 }
 
 # -----------------------------------------------------------------------
@@ -108,6 +128,48 @@ run "with_session_hosts" {
   assert {
     condition     = length(azurerm_monitor_data_collection_rule_association.avd) == 2
     error_message = "One DCR association must be planned per session host."
+  }
+
+  assert {
+    condition     = length(azurerm_monitor_data_collection_rule_association.config_access) == 2
+    error_message = "One config-access association must be planned per session host: the agent reaches the DCE BEFORE it knows any DCR, so the endpoint cannot be propagated through the rule."
+  }
+
+  assert {
+    condition = alltrue([
+      for a in azurerm_monitor_data_collection_rule_association.config_access :
+      a.name == "configurationAccessEndpoint"
+    ])
+    error_message = "A DCE association must be named configurationAccessEndpoint — the name is imposed, not chosen."
+  }
+
+  assert {
+    condition = alltrue([
+      for a in azurerm_monitor_data_collection_rule_association.config_access :
+      a.data_collection_rule_id == null
+    ])
+    error_message = "A config-access association carries data_collection_endpoint_id only, never data_collection_rule_id."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test 3b: dce_name_override — escape hatch on the endpoint name.
+# -----------------------------------------------------------------------
+run "dce_name_override" {
+  command = plan
+
+  variables {
+    data_collection_endpoint_name = "dce-legacy-avd"
+  }
+
+  assert {
+    condition     = azurerm_monitor_data_collection_endpoint.avd.name == "dce-legacy-avd"
+    error_message = "var.data_collection_endpoint_name must override the derived DCE name."
+  }
+
+  assert {
+    condition     = azurerm_monitor_data_collection_rule.avd.name == "dcr-avd-prod-gwc-01-avdinsights"
+    error_message = "Overriding the DCE name must not affect the DCR name."
   }
 }
 
@@ -208,6 +270,48 @@ run "validator_bad_sampling_frequency" {
   }
 
   expect_failures = [var.performance_counters]
+}
+
+# -----------------------------------------------------------------------
+# Test 8b: counters_single_instance_objects_carry_no_wildcard
+# -----------------------------------------------------------------------
+run "counters_single_instance_objects_carry_no_wildcard" {
+  command = plan
+
+  # Régression 2026-09-03 : `\Memory(*)\...` et `\Terminal Services(*)\...` sont
+  # des chemins INVALIDES (objets à instance unique) — Get-Counter répond
+  # « counter path could not be interpreted » et la collecte est silencieusement
+  # vide. 7 compteurs manquaient depuis l'origine, dont les 4 de mémoire.
+  # La liste MS écrit pourtant `(*)` : ne pas la recopier littéralement.
+  assert {
+    condition = alltrue(flatten([
+      for p in azurerm_monitor_data_collection_rule.avd.data_sources[0].performance_counter : [
+        for c in p.counter_specifiers :
+        !strcontains(c, "Memory(") && !strcontains(c, "Terminal Services(")
+      ]
+    ]))
+    error_message = "Memory et Terminal Services sont des objets à instance unique : le suffixe (*) rend le chemin invalide et la collecte silencieusement vide."
+  }
+
+  # Les objets MULTI-instance, eux, exigent bien (*) — vérifier qu'on ne les a
+  # pas « corrigés » par symétrie.
+  assert {
+    condition = alltrue(flatten([
+      for p in azurerm_monitor_data_collection_rule.avd.data_sources[0].performance_counter : [
+        for c in p.counter_specifiers :
+        !startswith(c, "\\PhysicalDisk\\") && !startswith(c, "\\RemoteFX Network\\")
+      ]
+    ]))
+    error_message = "PhysicalDisk et RemoteFX Network sont multi-instance : ils DOIVENT garder (*)."
+  }
+
+  assert {
+    condition = contains(
+      flatten([for p in azurerm_monitor_data_collection_rule.avd.data_sources[0].performance_counter : p.counter_specifiers]),
+      "\\Memory\\Available MBytes"
+    )
+    error_message = "Le compteur mémoire doit être collecté sous la forme \\Memory\\Available MBytes (c'est celui qui sert à mesurer la RAM par session)."
+  }
 }
 
 # -----------------------------------------------------------------------

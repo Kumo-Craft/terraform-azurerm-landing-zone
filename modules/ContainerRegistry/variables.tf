@@ -225,6 +225,67 @@ variable "network_rule_bypass_option" {
   }
 }
 
+variable "network_rule_bypass_for_tasks_enabled" {
+  description = <<-EOT
+  Whether ACR Tasks (and other trusted-service compute) may bypass the network rules of a
+  network-restricted registry. Maps to `network_rule_bypass_for_tasks_enabled`.
+
+  Default `false` — the secure posture, and identical to the provider default that this
+  module already sent implicitly, so it is **non-breaking**. Only meaningful when the
+  registry is network-restricted (`network_rule_set` set, Premium SKU).
+  EOT
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
+variable "azuread_authentication_as_arm_policy_enabled" {
+  description = <<-EOT
+  Whether Microsoft Entra tokens with the **ARM resource audience** may authenticate to
+  this registry. Maps to `azurerm_container_registry.azuread_authentication_as_arm_policy_enabled`.
+
+  Default **`false`** (secure / ALZ-compliant). The provider default is `true`; because
+  this module previously did NOT set the attribute, every apply RESET the ARM-audience
+  policy back to `true`, reopening non-compliance with the ALZ initiative
+  `Enforce-GR-ContReg` (rule `Deny-ContainerRegistry-ARM-Audience`). Set `true` only if a
+  workflow genuinely requires ARM-audience token auth to ACR.
+
+  ⚠️ **BREAKING** for registries previously managed by this module: they sat at the
+  implicit provider default `true`; the next apply flips them to `false` (the desired
+  hardening — this is exactly what fixes the observed `false -> true` drift on
+  crpgsprodgwcaks). No effect on registries already at `false`.
+  EOT
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
+variable "role_assignment_mode" {
+  description = <<-EOT
+  RBAC model for the registry's role assignments. Maps to
+  `azurerm_container_registry.role_assignment_mode`.
+
+  - `null` (default) → the provider default `LegacyRegistryPermissions` (registry-wide
+    roles — the model that every `AcrPull`/`AcrPush` grant in `role_assignments` assumes).
+    **Non-breaking.**
+  - `"AbacRepositoryPermissions"` → ABAC repository-scoped permissions (finer-grained,
+    per-repository RBAC). Opt in deliberately — switching an existing registry changes how
+    its role assignments are evaluated and can break registry-wide grants.
+
+  ⚠️ Same trap class as the ARM-audience policy: this attribute is Optional/non-Computed
+  with a provider default of Legacy, so leaving it `null` lets the provider force Legacy on
+  every apply — a registry set to ABAC out-of-band is reset to Legacy unless you set this
+  to `"AbacRepositoryPermissions"` here.
+  EOT
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.role_assignment_mode == null || contains(["AbacRepositoryPermissions", "LegacyRegistryPermissions"], var.role_assignment_mode)
+    error_message = "role_assignment_mode must be \"AbacRepositoryPermissions\" or \"LegacyRegistryPermissions\"."
+  }
+}
+
 ###############################################################
 # IDENTITY & CUSTOMER-MANAGED KEY (Premium SKU)
 ###############################################################

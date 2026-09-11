@@ -188,6 +188,23 @@ variable "authentication" {
   default = null
 }
 
+variable "active_directory_administrators" {
+  description = "Map of Entra (Azure AD) administrators for the server. Requires authentication.active_directory_auth_enabled = true. principal_type: User | Group | ServicePrincipal. tenant_id optional (defaults to authentication.tenant_id, else the provider tenant)."
+  type = map(object({
+    object_id      = string
+    principal_name = string
+    principal_type = string
+    tenant_id      = optional(string, null)
+  }))
+  default  = {}
+  nullable = false
+
+  validation {
+    condition     = alltrue([for a in values(var.active_directory_administrators) : contains(["User", "Group", "ServicePrincipal"], a.principal_type)])
+    error_message = "principal_type must be one of User, Group, ServicePrincipal."
+  }
+}
+
 ###############################################################
 # NETWORKING
 # Two mutually-exclusive models:

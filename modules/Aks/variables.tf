@@ -621,6 +621,31 @@ variable "log_analytics_workspace_id" {
   default     = null
 }
 
+variable "diagnostic_log_analytics_destination_type" {
+  type        = string
+  default     = null
+  description = "Destination table layout for the AKS control-plane diagnostic setting. Either \"Dedicated\" (resource-specific tables AKSAudit / AKSAuditAdmin / AKSControlPlane — RECOMMENDED for new deployments per MS Learn CAF, and required to place kube-audit-admin on the Basic plan) or \"AzureDiagnostics\" (legacy shared table). Default null = provider-managed (keeps the existing behaviour — SWITCHING to Dedicated is an in-place change that sends NEW logs to the AKS* tables; data already in AzureDiagnostics stays there and existing KQL must be rewritten)."
+
+  validation {
+    condition     = var.diagnostic_log_analytics_destination_type == null || contains(["Dedicated", "AzureDiagnostics"], var.diagnostic_log_analytics_destination_type)
+    error_message = "diagnostic_log_analytics_destination_type, when set, must be either \"Dedicated\" or \"AzureDiagnostics\"."
+  }
+}
+
+variable "diagnostic_log_categories" {
+  type = list(string)
+  default = [
+    "kube-apiserver",
+    "kube-audit-admin",
+    "kube-controller-manager",
+    "kube-scheduler",
+    "cluster-autoscaler",
+    "guard",
+  ]
+  nullable    = false
+  description = "AKS control-plane log categories enabled on the diagnostic setting. Default = the 6 historically-enabled categories (backward compatible). Note: kube-audit (full) is intentionally omitted in favour of kube-audit-admin; add it only if you accept its very high volume/cost."
+}
+
 variable "enable_container_insights" {
   type        = bool
   description = <<-EOT

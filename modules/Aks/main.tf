@@ -413,12 +413,20 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
   target_resource_id         = azurerm_kubernetes_cluster.this.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
-  enabled_log { category = "kube-apiserver" }
-  enabled_log { category = "kube-audit-admin" }
-  enabled_log { category = "kube-controller-manager" }
-  enabled_log { category = "kube-scheduler" }
-  enabled_log { category = "cluster-autoscaler" }
-  enabled_log { category = "guard" }
+  # null (default) = provider-managed => keeps the current legacy AzureDiagnostics
+  # behaviour (backward compatible). Set "Dedicated" to route to the resource-
+  # specific AKSAudit / AKSAuditAdmin / AKSControlPlane tables (prerequisite for
+  # putting kube-audit-admin on the Basic table plan — see the LogAnalyticsWorkspaceTable module).
+  log_analytics_destination_type = var.diagnostic_log_analytics_destination_type
+
+  # Category list is parameterised; default keeps the 6 historically-enabled
+  # categories, so an existing consumer sees no plan change.
+  dynamic "enabled_log" {
+    for_each = toset(var.diagnostic_log_categories)
+    content {
+      category = enabled_log.value
+    }
+  }
 }
 
 ###############################################################

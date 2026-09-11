@@ -51,6 +51,7 @@ module "storage" {
   cross_tenant_replication_enabled  = var.cross_tenant_replication_enabled
   infrastructure_encryption_enabled = var.infrastructure_encryption_enabled
   local_user_enabled                = var.local_user_enabled
+  allowed_copy_scope                = var.allowed_copy_scope
 
   customer_managed_key = var.customer_managed_key
   identity_type        = var.identity_type

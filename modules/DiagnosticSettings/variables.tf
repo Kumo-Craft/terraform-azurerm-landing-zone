@@ -8,10 +8,10 @@ variable "diagnostic_settings" {
   arbitrary to avoid issues where map keys may be unknown at plan time.
 
   - `name`                                     - (Required) Diagnostic setting name.
-  - `target_resource_id`                       - (Required) Target Azure resource ID.
+  - `target_resource_id`                       - (Required) Target Azure resource ID. Either a resource-scoped ID (.../providers/<type>/<name>) OR a bare subscription ID (/subscriptions/<guid>) to route the subscription-level Activity Log.
   - `logs`                                     - (Optional) Per-category log names (e.g. ["kube-audit", "kube-apiserver"]). Defaults to [].
   - `log_groups`                               - (Optional) Category-group names (e.g. ["allLogs", "audit"]). Required for AKS audit-log capture and for resources whose categories evolve. Defaults to [].
-  - `metrics`                                  - (Optional) Metric categories to enable (typically ["AllMetrics"]). Defaults to [].
+  - `metrics`                                  - (Optional) Metric categories to enable (typically ["AllMetrics"]). Defaults to []. At subscription scope (a bare /subscriptions/<guid> target) there is no platform-metrics namespace, so metric categories have no effect — leave this empty (Azure accepts the setting but nothing is emitted).
   - `log_analytics_workspace_id`               - (Optional) Log Analytics Workspace ID.
   - `log_analytics_destination_type`           - (Optional) Either "Dedicated" (resource-specific tables, RECOMMENDED for new deployments per MS Learn CAF) or "AzureDiagnostics" (legacy shared table — for backward compatibility only). Default null = provider-managed.
   - `storage_account_id`                       - (Optional) Storage Account ID for archival.
@@ -34,12 +34,18 @@ variable "diagnostic_settings" {
   }))
   nullable = false
 
+  # target_resource_id may be a resource-scoped ID
+  # (/subscriptions/<guid>/resourceGroups/<rg>/providers/<type>/<name>) OR a
+  # bare subscription ID (/subscriptions/<guid>) to route the subscription-level
+  # Activity Log. Malformed IDs are still rejected — the subscription branch
+  # requires a well-formed GUID (not just [^/]+).
   validation {
     condition = alltrue([
       for ds in var.diagnostic_settings :
+      can(regex("^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", ds.target_resource_id)) ||
       can(regex("^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/", ds.target_resource_id))
     ])
-    error_message = "target_resource_id must be a valid Azure resource ID."
+    error_message = "target_resource_id must be a resource ID (/subscriptions/<guid>/resourceGroups/<rg>/providers/<type>/<name>) or a bare subscription ID (/subscriptions/<guid>) for subscription-level Activity Log routing."
   }
 
   validation {

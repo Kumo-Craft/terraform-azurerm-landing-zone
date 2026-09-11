@@ -145,6 +145,24 @@ variable "cross_tenant_replication_enabled" {
   default     = false
 }
 
+variable "allowed_copy_scope" {
+  type        = string
+  description = <<-EOT
+    Restricts where data can be copied FROM this account (AzCopy / Put Block From URL /
+    Copy Blob). `AAD` limits copies to accounts in the same Entra tenant, `PrivateLink`
+    to accounts reachable on the same private link scope. null leaves the field unset,
+    which means "unrestricted" — and is what the ALZ guardrail deny-storage-copyscope
+    flags (its default parameter is `AAD`). Set it explicitly on any account that has
+    no cross-tenant copy use case.
+  EOT
+  default     = null
+
+  validation {
+    condition     = var.allowed_copy_scope == null || contains(["AAD", "PrivateLink"], coalesce(var.allowed_copy_scope, "AAD"))
+    error_message = "allowed_copy_scope must be null, \"AAD\" or \"PrivateLink\"."
+  }
+}
+
 variable "infrastructure_encryption_enabled" {
   type        = bool
   description = "Enable infrastructure-level AES-256 encryption (double encryption). Adds a second encryption layer below the service-level encryption. Cannot be changed after creation. **BREAKING (v0.2.30)**: default flipped from false to true (CAF defense-in-depth). Existing accounts with the old default will be destroyed and recreated on next apply — pin `infrastructure_encryption_enabled = false` before upgrading to preserve current behavior."

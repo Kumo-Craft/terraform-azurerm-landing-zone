@@ -12,6 +12,8 @@
 #   9. validator_tags_null_rejected    — var.tags nullable=false (F-8)
 #  10. validator_spot_requires_scaling — Spot pool without auto_scaling_enabled
 #  11. validator_lock_kind             — invalid lock.kind rejected
+#  (+ diagnostics_passthrough, cluster_rbac_group_principals, and the
+#   kv_network_acls passthrough + default_action/bypass validators)
 #
 # Run with:
 #   cd modules/AksStack
@@ -288,4 +290,104 @@ run "cluster_rbac_group_principals" {
     condition     = alltrue([for m in module.cluster_user : m.principal_type == "Group"])
     error_message = "cluster_user assignments must set principal_type = Group."
   }
+}
+
+# -----------------------------------------------------------------------
+# Test: diagnostics_passthrough — the stack forwards the AKS control-plane
+# diagnostic inputs to the Aks child (regression: these were silently dropped,
+# TF_VAR_* on an undeclared stack variable = no-op). Also covers the
+# disk_encryption_set_id passthrough added at the same time.
+# -----------------------------------------------------------------------
+run "diagnostics_passthrough" {
+  command = plan
+
+  variables {
+    log_analytics_workspace_id                = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-api-prod-gwc-management/providers/Microsoft.OperationalInsights/workspaces/law-api-prod-gwc-01"
+    diagnostic_log_analytics_destination_type = "Dedicated"
+    diagnostic_log_categories                 = ["kube-audit-admin", "kube-apiserver"]
+    disk_encryption_set_id                    = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-api-prod-gwc-aks/providers/Microsoft.Compute/diskEncryptionSets/des-api-prod-gwc-aks"
+  }
+
+  # If any of these were NOT declared/forwarded by the stack, planning the
+  # wrapped Aks module would fail with "Unsupported argument" before this
+  # assert — so a successful plan here IS the passthrough regression guard.
+  assert {
+    condition     = output.cluster_name == "aks-api-prod-gwc-001"
+    error_message = "Stack must plan successfully with the diagnostic + disk_encryption_set_id passthroughs set."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test: validator_diag_dest_type_passthrough — the stack re-declares the same
+# validation as Aks (invalid value rejected at the stack boundary).
+# -----------------------------------------------------------------------
+run "validator_diag_dest_type_passthrough" {
+  command = plan
+
+  variables {
+    diagnostic_log_analytics_destination_type = "Bogus"
+  }
+
+  expect_failures = [var.diagnostic_log_analytics_destination_type]
+}
+
+# -----------------------------------------------------------------------
+# Test: kv_network_acls_passthrough — the stack forwards kv_network_acls to the
+# KeyVault child's network_acls. If the stack didn't declare the var (or the KV
+# child rejected network_acls) planning would fail before this assert, so a
+# successful plan with the firewall set IS the passthrough guard. The child's
+# `resource` output does not surface network_acls (and wrapper tests can't reach
+# child resources), so the deeper guarantees are covered elsewhere: the
+# KeyVault module's own dynamic-block behaviour, and — for non-regression — the
+# provider source confirming network_acls is Optional+Computed (a null omits the
+# block and preserves existing ACLs; that null path is exercised by every other
+# run here, none of which sets kv_network_acls).
+run "kv_network_acls_passthrough" {
+  command = plan
+
+  variables {
+    kv_network_acls = {
+      default_action = "Deny"
+      bypass         = "AzureServices"
+      ip_rules       = ["203.0.113.0/24"]
+    }
+  }
+
+  assert {
+    condition     = output.kv_resource_group_name == "rg-api-prod-gwc-aks"
+    error_message = "Stack must plan successfully with kv_network_acls set (firewall forwarded to the KeyVault child)."
+  }
+}
+
+# -----------------------------------------------------------------------
+# Test: validator_kv_network_acls_default_action — invalid default_action
+# rejected at the stack boundary (mirrors KeyVault/KeyVaultStack).
+# -----------------------------------------------------------------------
+run "validator_kv_network_acls_default_action" {
+  command = plan
+
+  variables {
+    kv_network_acls = {
+      default_action = "Block"
+      bypass         = "AzureServices"
+    }
+  }
+
+  expect_failures = [var.kv_network_acls]
+}
+
+# -----------------------------------------------------------------------
+# Test: validator_kv_network_acls_bypass — invalid bypass rejected.
+# -----------------------------------------------------------------------
+run "validator_kv_network_acls_bypass" {
+  command = plan
+
+  variables {
+    kv_network_acls = {
+      default_action = "Deny"
+      bypass         = "Everything"
+    }
+  }
+
+  expect_failures = [var.kv_network_acls]
 }

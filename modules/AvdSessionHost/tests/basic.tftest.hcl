@@ -5,6 +5,7 @@
 #   2. happy_name_override         — explicit var.name (XOR escape hatch), no convention naming
 #   3. happy_windows_server_license — license_type = "Windows_Server"
 #   4. happy_patch_mode_manual     — patch_mode = "Manual", patch_assessment_mode = ImageDefault
+#   4b. happy_assessment_override  — patch_assessment_mode explicite gagne sur la derivation
 #   5. happy_with_lock_and_rbac    — var.lock + role_assignment, both module blocks planned
 #   6. happy_encryption_at_host_disabled — encryption_at_host_enabled = false (override secure default)
 #   7. validator_invalid_license_type   — license_type = "Foo" must fail
@@ -15,6 +16,9 @@
 #  12. happy_image_plan_m365            — image_plan set renders a plan block (M365 marketplace image)
 #  13. happy_source_image_id           — source_image_id set: source_image_reference + plan suppressed
 #  14. validator_invalid_source_image_id — malformed source_image_id must fail
+#  15. happy_identity_default          — no UAMI => SystemAssigned only
+#  16. happy_user_assigned_identity    — UAMI declared => "SystemAssigned, UserAssigned"
+#  17. validator_invalid_uami          — non-UAMI ARM id must fail
 #
 # Run with:
 #   cd modules/AvdSessionHost
@@ -156,6 +160,31 @@ run "happy_patch_mode_manual" {
   assert {
     condition     = azurerm_windows_virtual_machine.this["01"].bypass_platform_safety_checks_on_user_schedule_enabled == null
     error_message = "bypass_platform_safety_checks_on_user_schedule_enabled must be null when patch_mode = Manual."
+  }
+}
+
+# ---------------------------------------------------------------------
+# Test 4b: happy_assessment_override — patch_assessment_mode explicite
+# (AutomaticByPlatform) avec patch_mode = AutomaticByOS : l'override gagne
+# sur la derivation F-1 (cas policy Update Manager periodic assessment).
+# ---------------------------------------------------------------------
+run "happy_assessment_override" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+
+    patch_mode            = "AutomaticByOS"
+    patch_assessment_mode = "AutomaticByPlatform"
+    vm_count              = 1
+  }
+
+  assert {
+    condition     = azurerm_windows_virtual_machine.this["01"].patch_assessment_mode == "AutomaticByPlatform"
+    error_message = "patch_assessment_mode override must win over the patch_mode-derived value."
   }
 }
 
@@ -406,4 +435,149 @@ run "validator_invalid_source_image_id" {
   }
 
   expect_failures = [var.source_image_id]
+}
+
+# ---------------------------------------------------------------------
+# Test 15: happy_identity_default — no UAMI passed => SystemAssigned only.
+# ---------------------------------------------------------------------
+run "happy_identity_default" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+    vm_count             = 1
+  }
+
+  assert {
+    condition     = azurerm_windows_virtual_machine.this["01"].identity[0].type == "SystemAssigned"
+    error_message = "With no user_assigned_identity_ids the VM must carry SystemAssigned only."
+  }
+
+  assert {
+    condition     = length(azurerm_windows_virtual_machine.this["01"].identity[0].identity_ids) == 0
+    error_message = "identity_ids must stay empty when no UAMI is supplied."
+  }
+}
+
+# ---------------------------------------------------------------------
+# Test 16: happy_user_assigned_identity — the AMA identity attached by the
+# ALZ DINE is DECLARED here, so Terraform converges with the policy instead
+# of removing it on the next apply (silent telemetry outage, 2026-09-02).
+# ---------------------------------------------------------------------
+run "happy_user_assigned_identity" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+    vm_count             = 1
+
+    user_assigned_identity_ids = [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-mgm-prod-gwc-management/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uai-mgm-prod-gwc-01-ama",
+    ]
+  }
+
+  assert {
+    condition     = azurerm_windows_virtual_machine.this["01"].identity[0].type == "SystemAssigned, UserAssigned"
+    error_message = "Passing a UAMI must switch the identity type to \"SystemAssigned, UserAssigned\" — SystemAssigned alone would make Terraform strip the policy-attached identity."
+  }
+
+  assert {
+    condition = contains(
+      azurerm_windows_virtual_machine.this["01"].identity[0].identity_ids,
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-mgm-prod-gwc-management/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uai-mgm-prod-gwc-01-ama"
+    )
+    error_message = "The supplied UAMI must appear in identity_ids."
+  }
+}
+
+# ---------------------------------------------------------------------
+# Test 17: validator_invalid_uami — not a UAMI ARM id must fail.
+# ---------------------------------------------------------------------
+run "validator_invalid_uami" {
+  command = plan
+
+  variables {
+    name                       = "vm-test"
+    vm_count                   = 1
+    user_assigned_identity_ids = ["/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/nope"]
+  }
+
+  expect_failures = [var.user_assigned_identity_ids]
+}
+
+# ---------------------------------------------------------------------
+# CMK on the OS disk — see ../DiskEncryptionSet.
+#
+# The pairing that Azure rejects: an ephemeral OS disk is host-local
+# storage, never a managed disk, so a DES has nothing to encrypt. Caught
+# at plan time so the error says why.
+# ---------------------------------------------------------------------
+run "os_disk_cmk_happy" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+    vm_count             = 1
+
+    os_disk = {
+      ephemeral              = false
+      storage_account_type   = "Premium_LRS"
+      caching                = "ReadWrite"
+      disk_size_gb           = 128
+      disk_encryption_set_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Compute/diskEncryptionSets/des-avd-prod-gwc-01"
+    }
+  }
+
+  assert {
+    condition     = alltrue([for vm in azurerm_windows_virtual_machine.this : vm.os_disk[0].disk_encryption_set_id != null])
+    error_message = "disk_encryption_set_id must reach every session host's OS disk."
+  }
+}
+
+run "os_disk_cmk_without_ephemeral_false_fails" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+
+    os_disk = {
+      ephemeral              = true
+      disk_encryption_set_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Compute/diskEncryptionSets/des-avd-prod-gwc-01"
+    }
+  }
+
+  expect_failures = [var.os_disk]
+}
+
+run "os_disk_cmk_unset_by_default" {
+  command = plan
+
+  variables {
+    subscription_acronym = "avd"
+    environment          = "nprd"
+    region_code          = "weu"
+    workload             = "sh"
+    vm_count             = 1
+
+    os_disk = {
+      ephemeral = false
+    }
+  }
+
+  assert {
+    condition     = alltrue([for vm in azurerm_windows_virtual_machine.this : vm.os_disk[0].disk_encryption_set_id == null])
+    error_message = "No DES unless the caller asks for one — the platform key stays the default."
+  }
 }

@@ -68,6 +68,7 @@ resource "azurerm_storage_account" "this" {
   cross_tenant_replication_enabled  = var.cross_tenant_replication_enabled
   infrastructure_encryption_enabled = var.infrastructure_encryption_enabled
   local_user_enabled                = var.local_user_enabled
+  allowed_copy_scope                = var.allowed_copy_scope
   allow_nested_items_to_be_public   = false
 
   dynamic "identity" {
