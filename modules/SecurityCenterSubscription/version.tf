@@ -16,7 +16,7 @@ terraform {
     # state migration. The module no longer creates any azurerm resource.
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 }
