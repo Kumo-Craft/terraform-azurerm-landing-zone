@@ -121,3 +121,77 @@ subscription_placement = {
 | policy_assignment_identity_ids | Map of policy assignment identity principal IDs |
 | policy_assignment_resource_ids | Map of policy assignment name => resource ID (consumed by downstream PolicyExemption / PolicyRemediation modules at the LZ scope). |
 | policy_definition_resource_ids | Map of policy definition name => resource ID. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| alz | ~> 0.21 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+No providers.
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| alz\_architecture | Azure/avm-ptn-alz/azurerm | 0.21.0 |
+
+## Resources
+
+No resources.
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| action\_group\_ids | List of Action Group IDs | `list(string)` | n/a | yes |
+| ama\_identity\_id | AMA User Assigned Identity ID | `string` | n/a | yes |
+| connectivity\_subscription\_id | Connectivity subscription ID | `string` | n/a | yes |
+| dcr\_change\_tracking\_id | Full resource ID of the Change Tracking & Inventory Data Collection Rule (AlzManagement output dcr\_change\_tracking\_id). | `string` | n/a | yes |
+| dcr\_defender\_sql\_id | Full resource ID of the Defender for SQL Data Collection Rule (AlzManagement output dcr\_defender\_sql\_id). | `string` | n/a | yes |
+| dcr\_vm\_insights\_id | Full resource ID of the VM Insights Data Collection Rule (AlzManagement output dcr\_vm\_insights\_id). | `string` | n/a | yes |
+| ddos\_protection\_plan\_id | DDoS Protection Plan resource ID | `string` | n/a | yes |
+| location | Default Azure region for DINE policy remediation deployments (e.g. AMBA resource group, Log Analytics, DCR). Not a management group resource attribute — management groups are global. | `string` | n/a | yes |
+| log\_analytics\_workspace\_id | Full resource ID of the Log Analytics Workspace | `string` | n/a | yes |
+| management\_root\_id | Parent management group ID (tenant root) | `string` | n/a | yes |
+| management\_subscription\_id | Management subscription ID | `string` | n/a | yes |
+| subscription\_placement | Map of subscription placements in management groups | <pre>map(object({<br>    subscription_id       = string<br>    management_group_name = string<br>  }))</pre> | n/a | yes |
+| action\_group\_email | Action group email addresses | `list(string)` | `[]` | no |
+| aks\_allowed\_container\_images\_regex | Regex of container-image references ALLOWED by the MCSB rule<br>`ensureAllowedContainerImagesInKubernetesCluster` (Deploy-ASC-Monitoring @ mg-lzr).<br><br>The ALZ default `^(.+){0}$` matches ONLY the empty string → no image can satisfy it →<br>the rule is inert (produces phantom Gatekeeper violations that signal nothing). This<br>overrides it with the real allowed registries.<br><br>Default: MCR + any Azure Container Registry — `^(mcr\.microsoft\.com|[a-z0-9]+\.azurecr\.io)/.*$`.<br>Deliberately NOT tied to a single ACR name: this is applied at mg-lzr (ALL landing zones),<br>so each LZ's own ACR (cr…​.azurecr.io) must match without hardcoding. Public-internet<br>registries (ghcr.io, docker.io, docker.n8n.io, quay.io, …) are intentionally excluded —<br>mirror those images into an ACR rather than widening this pattern.<br><br>AUDIT-phase value. When flipping the effect to `deny`, consider tightening `[a-z0-9]+` to<br>the house naming pattern (e.g. `cr[a-z0-9]+`) to also exclude third-party ACRs. The effect<br>itself (`allowedContainerImagesInKubernetesClusterEffect`) is NOT set by this module — it<br>stays at the ALZ default (Audit); flip it only once violations are zero.<br><br>Backslashes must be escaped for HCL: e.g. `\\.` for a literal dot. | `string` | `"^(mcr\\.microsoft\\.com|[a-z0-9]+\\.azurecr\\.io)/.*$"` | no |
+| alert\_severity | Severity levels for alert notifications | `list(string)` | <pre>[<br>  "Sev0",<br>  "Sev1",<br>  "Sev2",<br>  "Sev3",<br>  "Sev4"<br>]</pre> | no |
+| amba\_disable\_tag\_name | Tag name to disable monitoring at resource level | `string` | `"MonitorDisable"` | no |
+| amba\_disable\_tag\_values | Tag values to disable monitoring | `list(string)` | <pre>[<br>  "true",<br>  "Test",<br>  "Dev",<br>  "Sandbox"<br>]</pre> | no |
+| amba\_resource\_group\_name | Resource group name for AMBA monitoring | `string` | `"rg-amba-monitoring-001"` | no |
+| amba\_resource\_group\_tags | Tags for the AMBA resource group | `map(string)` | `{}` | no |
+| architecture\_name | ALZ architecture name | `string` | `"core"` | no |
+| backup\_exclusion\_tags | Tags to exclude from VM Backup policy | `list(string)` | <pre>[<br>  "NoBackup"<br>]</pre> | no |
+| defender\_plans | Defender for Cloud plan activation, passed to Deploy-MDFC-Config-H224 via<br>policy\_assignments\_to\_modify. Each plan value must be either<br>"DeployIfNotExists" (enables the plan at Standard pricing) or "Disabled"<br>(skips the plan).<br><br>Default: all plans enabled (pay-per-use with 0 resources ≈ 0 cost,<br>auto-coverage when a workload is deployed). Override individual plans<br>by setting them to "Disabled" if your org has a specific exclusion.<br><br>Note: Defender for APIs is not exposed by the Deploy-MDFC-Config\_20240319<br>policySet and must be managed out-of-band (or via a future policy version). | <pre>object({<br>    app_services                      = optional(string, "DeployIfNotExists")<br>    arm                               = optional(string, "DeployIfNotExists")<br>    containers                        = optional(string, "DeployIfNotExists")<br>    cosmos_dbs                        = optional(string, "DeployIfNotExists")<br>    cspm                              = optional(string, "DeployIfNotExists")<br>    key_vault                         = optional(string, "DeployIfNotExists")<br>    oss_db                            = optional(string, "DeployIfNotExists")<br>    servers                           = optional(string, "DeployIfNotExists")<br>    servers_vulnerability_assessments = optional(string, "DeployIfNotExists")<br>    sql                               = optional(string, "DeployIfNotExists")<br>    sql_on_vm                         = optional(string, "DeployIfNotExists")<br>    storage                           = optional(string, "DeployIfNotExists")<br>  })</pre> | `{}` | no |
+| email\_security\_contact | Email for Defender for Cloud security contact | `string` | `""` | no |
+| management\_group\_hierarchy\_settings | Tenant-level hierarchy settings. Sets default MG for new subs and restricts MG creation. | <pre>object({<br>    default_management_group_name            = string<br>    require_authorization_for_group_creation = optional(bool, true)<br>    update_existing                          = optional(bool, false)<br>  })</pre> | `null` | no |
+| mdfc\_export\_resource\_group\_name | RG name for the MDFC continuous-export automation (created per subscription by the Deploy-MDFC-Config DINE policy). | `string` | `"rg-alz-mdfc-export"` | no |
+| policy\_assignment\_non\_compliance\_message\_settings | Default non-compliance message settings applied to policy assignments by the alz provider. Empty = AVM defaults. | <pre>object({<br>    default_message = optional(string)            # null = pas de message par défaut (comportement AVM backwards-compat)<br>    merge_mode      = optional(string, "replace") # doit rester "replace" | "prefer_existing", jamais null (validation AVM)<br>  })</pre> | `{}` | no |
+| private\_dns\_zone\_resource\_group\_name | Resource group for private DNS zones. Null means no specific RG is required by the DINE policy (distinct from empty string). | `string` | `null` | no |
+| retries | Retry settings forwarded to avm-ptn-alz (eventual consistency on fresh MG/policy/role deploys). Empty = AVM defaults. | `any` | `{}` | no |
+| service\_health\_resource\_group\_name | RG name for the Service Health alerts (created per subscription by the Deploy-SvcHealth-BuiltIn DINE policy). | `string` | `"rg-alz-service-health"` | no |
+| subscription\_placement\_destroy\_behavior | Where subscriptions go when their placement is destroyed. One of: parent, intermediate\_root, custom, default. | `string` | `"default"` | no |
+| subscription\_placement\_destroy\_custom\_target\_management\_group\_id | Target management group id for subscriptions on destroy when subscription\_placement\_destroy\_behavior = "custom". | `string` | `null` | no |
+| vmss\_policy\_not\_scopes | Resource IDs to EXCLUDE (notScopes) from the VMSS monitoring / change-tracking<br>DINE policy assignments at mg-lz (Deploy-VMSS-Monitoring, Deploy-VMSS-ChangeTrack).<br><br>Typical use: AKS node resource groups (rg-...-aks-nodes) whose VMSS are managed by<br>AKS and must not be governed by these policies — add one entry per AKS.<br><br>Wired to `not_scopes` on both assignments via policy\_assignments\_to\_modify<br>(supported by avm-ptn-alz 0.21.0). Default [] leaves notScopes empty — the current<br>state — so it is non-breaking. Previously this input was passed by the ALZ unit but<br>NOT declared here, so Terraform silently discarded it (the exclusions never applied). | `list(string)` | `[]` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| management\_group\_ids | Map of management group IDs |
+| policy\_assignment\_identity\_ids | Map of policy assignment identity principal IDs |
+| policy\_assignment\_resource\_ids | Map of policy assignment name => resource ID (consumed by downstream PolicyExemption / PolicyRemediation modules at the LZ scope). |
+| policy\_definition\_resource\_ids | Map of policy definition name => resource ID. |
+| resource | Full ALZ architecture module output object |
+<!-- END_TF_DOCS -->

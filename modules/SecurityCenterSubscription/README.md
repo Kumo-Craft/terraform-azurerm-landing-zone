@@ -110,3 +110,51 @@ See also [`SecurityCenterWorkspace`](../SecurityCenterWorkspace).
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azapi"` (+ mocked `azurerm` for the `removed` block): parent_id normalization (bare/path), Alert+AttackPath emission, Alert-only default severity, multi-email, and validators (empty sources object, bad severity/risk-level, bad subscription_id, bad role state/roles, malformed email). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azapi | ~> 2.4 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azapi_resource.this](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| email | Security contact email(s) that receive Microsoft Defender for Cloud notifications. Azure supports multiple recipients separated by ';' or ',' (maps to properties.emails). | `string` | n/a | yes |
+| subscription\_id | Subscription the Microsoft Defender for Cloud security contact applies to. Accepts a<br>bare GUID or a full /subscriptions/<guid> path (normalized in main.tf).<br><br>With the azapi rewrite this is now FUNCTIONAL, not just an assertion: it is the<br>`parent_id` of the securityContacts resource, so the contact is created on exactly this<br>subscription (the azapi provider's credentials must have access to it). This supersedes<br>the previous client\_config precondition guardrail (PR #148), which existed only because<br>the old azurerm\_security\_center\_contact had no subscription argument. | `string` | n/a | yes |
+| enabled | Whether the security contact is enabled (maps to properties.isEnabled). Default true — the whole point of the module. Replaces the legacy alert\_notifications flag. | `bool` | `true` | no |
+| notifications\_by\_role | Email notifications to holders of specific RBAC roles on the subscription (maps to<br>properties.notificationsByRole). Replaces the legacy alerts\_to\_admins flag.<br><br>- state : "On" or "Off". Default "On".<br>- roles : subset of AccountAdmin / Contributor / Owner / ServiceAdmin. Default ["Owner"].<br><br>Default `{ state = "On", roles = ["Owner"] }` preserves the previous alerts\_to\_admins=true<br>behaviour and matches the live state on sub-pgroup-shared-corp-prod. Set to `null` to omit<br>the block entirely (Defender then sends role notifications to no one). | <pre>object({<br>    state = optional(string, "On")<br>    roles = optional(list(string), ["Owner"])<br>  })</pre> | `{}` | no |
+| notifications\_sources | Notification sources evaluated for email delivery (maps to properties.notificationsSources,<br>API 2023-12-01-preview). This is the field the legacy azurerm\_security\_center\_contact could<br>not express, which kept Deploy-ASC-SecurityContacts non-compliant despite a configured contact.<br><br>- alert.minimal\_severity      : "High" / "Medium" / "Low"  (sourceType "Alert")<br>- attack\_path.minimal\_risk\_level : "Critical" / "High" / "Medium" / "Low" (sourceType "AttackPath")<br><br>Default `null` → the block is OMITTED (preserves current behaviour; nothing imposed). Declare<br>it to satisfy the policy's existence condition — the ALZ-compliant posture is<br>`{ alert = { minimal_severity = "High" }, attack_path = { minimal_risk_level = "Critical" } }`.<br>Provide at least one of alert / attack\_path when the object is set. | <pre>object({<br>    alert = optional(object({<br>      minimal_severity = optional(string, "High")<br>    }))<br>    attack_path = optional(object({<br>      minimal_risk_level = optional(string, "Critical")<br>    }))<br>  })</pre> | `null` | no |
+| phone | Optional security contact phone number (maps to properties.phone; omitted when null). | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| email | The configured security contact email(s) (properties.emails). |
+| id | The ID of the security contact (.../providers/Microsoft.Security/securityContacts/default). |
+| name | The security contact name — always "default" (Azure allows only one, under this name). |
+| notifications\_sources | The effective notificationsSources[] written to the contact (empty list when none declared). |
+<!-- END_TF_DOCS -->

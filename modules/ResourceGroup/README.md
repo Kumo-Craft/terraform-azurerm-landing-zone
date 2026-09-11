@@ -124,3 +124,59 @@ inputs = {
 | `names` | `map(string)` of RG names |
 | `resources` | Full `azurerm_resource_group` objects (advanced) |
 | `role_assignment_ids` | `map(string)` of role assignment IDs, keyed `"<rg_key>\|<ra_key>"` |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| role\_assignments | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment for naming convention (e.g. prod, nprd). Automatically injected by root.hcl. | `string` | n/a | yes |
+| location | Azure region where all resource groups will be deployed. | `string` | n/a | yes |
+| region\_code | Region code for naming convention (e.g. gwc, weu). Automatically injected by root.hcl. | `string` | n/a | yes |
+| resource\_groups | Map of Resource Groups to create. Map key is an arbitrary identifier used for<br>output lookup (e.g. dependency.rg.outputs.resource\_groups["network"]).<br><br>Per-entry fields:<br>- `workload`         - (Required) Workload name. Final RG name = rg-{acr}-{env}-{region}-{workload}<br>- `name`             - (Optional) Explicit RG name override. If null, computed from naming.<br>- `location`         - (Optional) Override the set-level location for this specific RG. Useful when most<br>                       RGs sit in one region but a few must be elsewhere (e.g. AVD control plane forced<br>                       to westeurope while session hosts and storage stay in germanywestcentral).<br>- `region_code`      - (Optional) Override the set-level region\_code in the computed name. Should be<br>                       set together with `location` to keep the name aligned with the actual region<br>                       (e.g. location="westeurope" + region\_code="weu").<br>- `tags`             - (Optional) Per-RG tags. Merged on top of the set-level `tags`.<br>- `lock`             - (Optional) Management lock. { kind = "CanNotDelete"\|"ReadOnly", name = optional(string), notes = optional(string) }<br>- `role_assignments` - (Optional) Map of role assignments scoped to this RG. | <pre>map(object({<br>    workload    = string<br>    name        = optional(string)<br>    location    = optional(string)<br>    region_code = optional(string)<br>    tags        = optional(map(string), {})<br>    lock = optional(object({<br>      kind  = string<br>      name  = optional(string)<br>      notes = optional(string) # ForceNew in provider — changing destroys+recreates the lock.<br>    }))<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name             = string<br>      principal_id                           = string<br>      principal_type                         = optional(string)<br>      condition                              = optional(string)<br>      condition_version                      = optional(string)<br>      description                            = optional(string)<br>      skip_service_principal_aad_check       = optional(bool, false)<br>      delegated_managed_identity_resource_id = optional(string)<br>    })), {})<br>  }))</pre> | n/a | yes |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, con, idn, sec, shc). Applied to every RG in the set. | `string` | n/a | yes |
+| tags | Tags applied to every RG in the set. Per-RG tags override these on conflict. Merged with auto-generated CreatedOn tag. | `map(string)` | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of resource group IDs keyed by the input map key. Convenience for `dependency.rg.outputs.ids["network"]`. |
+| locations | Map of resource group locations keyed by the input map key. |
+| names | Map of resource group names keyed by the input map key. |
+| resource\_groups | Map of created resource groups keyed by the input map key. Each value: { id, name, location, tags }. |
+| resources | Full azurerm\_resource\_group resource objects, keyed by input map key. |
+| role\_assignment\_ids | Map of role assignment keys ("<rg\_key>\|<ra\_key>") to their Azure resource IDs. |
+<!-- END_TF_DOCS -->

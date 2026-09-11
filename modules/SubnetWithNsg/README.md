@@ -267,3 +267,50 @@ inputs = {
 | resources | Map of full subnet name => complete azapi_resource object |
 | lock_ids | Map of subnet name => management lock ID (only entries where a lock was configured) |
 | role_assignment_ids | Map of `<subnet_name>.<assignment_key>` => role assignment resource ID |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azapi | ~> 2.4 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azapi_resource.subnet](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| subnets | List of subnets to create with NSG attached in a single API call.<br>Uses azapi\_resource to comply with Azure Policy "Subnets must have a NSG".<br><br>- `name`                              - (Required) Subnet name.<br>- `address_prefixes`                  - (Required) List of CIDR blocks (e.g. ["10.0.0.0/24"]). Supports dual-stack (IPv4 + IPv6) and multi-CIDR subnets.<br>- `nsg_id`                            - (Optional) NSG resource ID to associate.<br>- `route_table_id`                    - (Optional) Route Table resource ID to associate.<br>- `nat_gateway_id`                    - (Optional) NAT Gateway resource ID. Cannot be set on the AzureFirewallSubnet, GatewaySubnet, AzureBastionSubnet.<br>- `service_endpoints`                 - (Optional) List of service endpoints (e.g. ["Microsoft.Storage", "Microsoft.KeyVault"]). Empty = none.<br>- `private_endpoint_network_policies` - (Optional) "Enabled", "Disabled", "NetworkSecurityGroupEnabled", "RouteTableEnabled". Default "Disabled" (recommended for PE-hosting subnets; some PEs require this set to Disabled).<br>- `default_outbound_access_enabled`   - (Optional) Enable default outbound access. Defaults to false (best practice; outbound through NAT/firewall instead).<br>- `ip_address_pool`                   - (Optional) IPAM pool allocation for the subnet. Mutually exclusive with address\_prefixes.<br>- `delegation`                        - (DEPRECATED, use `delegations`) Single service delegation. Merged with `delegations` if both set.<br>- `delegations`                       - (Optional) List of service delegations. Replaces `delegation`. Most subnets need at most one, but the schema allows several.<br>- `lock`                              - (Optional) Management lock for this subnet. Kind must be "CanNotDelete" or "ReadOnly".<br>- `role_assignments`                  - (Optional) Map of role assignments scoped to this subnet. | <pre>list(object({<br>    name                              = string<br>    address_prefixes                  = optional(list(string), [])<br>    nsg_id                            = optional(string)<br>    route_table_id                    = optional(string)<br>    nat_gateway_id                    = optional(string)<br>    service_endpoints                 = optional(list(string), [])<br>    private_endpoint_network_policies = optional(string, "Disabled")<br>    default_outbound_access_enabled   = optional(bool, false)<br>    ip_address_pool = optional(object({<br>      id                     = string<br>      number_of_ip_addresses = number<br>    }))<br>    delegation = optional(object({<br>      name         = string<br>      service_name = string<br>    }))<br>    delegations = optional(list(object({<br>      name         = string<br>      service_name = string<br>    })), [])<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "ServicePrincipal")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>  }))</pre> | n/a | yes |
+| virtual\_network\_id | The full resource ID of the virtual network. | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| lock\_ids | Map of subnet name => management lock ID (only entries where a lock was configured) |
+| resources | Map of subnet name => complete azapi\_resource object |
+| role\_assignment\_ids | Map of '<subnet\_name>.<assignment\_key>' => role assignment resource ID |
+| subnet\_ids | Map of subnet name => subnet ID |
+<!-- END_TF_DOCS -->

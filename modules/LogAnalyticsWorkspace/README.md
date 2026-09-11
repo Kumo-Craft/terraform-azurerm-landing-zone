@@ -93,3 +93,73 @@ No raw `resource` output on purpose — exporting the whole object surfaces prov
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: derived naming, name override, secure defaults, commitment tier, identity, lock, and validators (retention bounds, daily quota, sku, reservation tier/sku pairing, name charset, UserAssigned without ids). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_log_analytics_workspace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/log_analytics_workspace) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region. | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the workspace. | `string` | n/a | yes |
+| allow\_resource\_only\_permissions | Let users read data for resources they can see, without workspace-level permission (resource-context RBAC). | `bool` | `true` | no |
+| cmk\_for\_query\_forced | Force customer-managed storage for query management. Requires a CMK-enabled dedicated cluster — see the Sentinel/CMK prerequisites. | `bool` | `null` | no |
+| daily\_quota\_gb | Daily ingestion cap in GB. -1 = NO cap (Azure default). Microsoft warns a cap must not be a primary cost tool — once hit, ingestion stops. | `number` | `-1` | no |
+| data\_collection\_rule\_id | Optional default Data Collection Rule ID for this workspace. | `string` | `null` | no |
+| environment | Environment (e.g. prod, nprd). | `string` | `null` | no |
+| identity | Optional managed identity. type: SystemAssigned or UserAssigned (identity\_ids required for UserAssigned). | <pre>object({<br>    type         = string<br>    identity_ids = optional(list(string), [])<br>  })</pre> | `null` | no |
+| immediate\_data\_purge\_on\_30\_days\_enabled | Remove data immediately after 30 days. Leave null unless a data-residency rule requires it. | `bool` | `null` | no |
+| internet\_ingestion\_enabled | Allow ingestion over the public Internet. Default false = private only (reach it via AMPLS). | `bool` | `false` | no |
+| internet\_query\_enabled | Allow querying over the public Internet. Default false = private only (reach it via AMPLS). | `bool` | `false` | no |
+| local\_authentication\_enabled | Allow workspace-key (local) auth in addition to Microsoft Entra. Default false = Entra ID only. | `bool` | `false` | no |
+| lock | Optional Resource Lock on the workspace.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit workspace name. If null, computed via ../Naming (log-{acr}-{env}-{region}-{workload}). Use this to preserve a legacy/house prefix (e.g. law-...). | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu). | `string` | `null` | no |
+| reservation\_capacity\_in\_gb\_per\_day | Commitment tier capacity in GB/day. Only valid when sku = CapacityReservation. Allowed: 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 25000, 50000. | `number` | `null` | no |
+| retention\_in\_days | Interactive retention in days (30-730). Note: a Sentinel-enabled workspace gets 90 days free. | `number` | `30` | no |
+| sku | Workspace SKU. PerGB2018 (default) or CapacityReservation for commitment tiers; legacy: PerNode/Premium/Standalone/Standard/Unlimited; LACluster only when linked to a dedicated cluster. | `string` | `"PerGB2018"` | no |
+| subscription\_acronym | Subscription acronym (e.g. sec, mgm, con). | `string` | `null` | no |
+| tags | Tags to apply to the workspace. | `map(string)` | `{}` | no |
+| workload | Workload name (naming suffix segment). | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | Resource ID of the Log Analytics Workspace (use for AMPLS scoped services, DCR destinations, diagnostic settings). |
+| lock\_ids | Map of management lock IDs (empty when var.lock is null). |
+| name | Name of the Log Analytics Workspace. |
+| primary\_shared\_key | Primary shared key. Empty/unusable when local\_authentication\_enabled = false (the default). |
+| secondary\_shared\_key | Secondary shared key. Empty/unusable when local\_authentication\_enabled = false (the default). |
+| workspace\_id | Workspace (customer) ID — GUID. Used by agents/connectors, not the ARM id. |
+<!-- END_TF_DOCS -->

@@ -114,3 +114,63 @@ There is no `moved` block recipe that avoids this — Terraform cannot map inlin
 | name | The route table name |
 | routes | The route definitions applied to the route table |
 | resource | Complete route table resource object |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_route.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/route) | resource |
+| [azurerm_route_table.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/route_table) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region where the route table will be deployed | `string` | n/a | yes |
+| resource\_group\_name | Resource group name where the route table will be created | `string` | n/a | yes |
+| bgp\_route\_propagation\_enabled | Whether BGP route propagation is enabled. Set to false for spoke VNets in hub-and-spoke topologies. | `bool` | `true` | no |
+| environment | Environment for naming convention (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Controls the Resource Lock configuration for this resource.<br><br>- `kind` - (Required) The type of lock. Possible values are "CanNotDelete" and "ReadOnly".<br>- `name` - (Optional) The name of the lock. If not specified, generated from the kind value. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit Route Table name. If null, computed from naming components. | `string` | `null` | no |
+| region\_code | Region code for naming convention (e.g. gwc, weu) | `string` | `null` | no |
+| routes | A map of routes to add to the route table. The map key is deliberately<br>arbitrary to avoid issues where map keys may be unknown at plan time.<br><br>- `name`                   - (Required) The name of the route.<br>- `address_prefix`         - (Required) Destination CIDR or Azure Service Tag.<br>- `next_hop_type`          - (Required) VirtualNetworkGateway, VnetLocal, Internet, VirtualAppliance, or None.<br>- `next_hop_in_ip_address` - (Optional) Next hop IP. Required when next\_hop\_type is VirtualAppliance. | <pre>map(object({<br>    name                   = string<br>    address_prefix         = string<br>    next_hop_type          = string<br>    next_hop_in_ip_address = optional(string)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, con, idn, sec) | `string` | `null` | no |
+| tags | Tags to assign to the route table | `map(string)` | `{}` | no |
+| workload | Workload name for naming convention (e.g. default, spoke) | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The route table ID |
+| name | The route table name |
+| resource | The complete route table resource object |
+| route\_ids | Map of route map key => route resource ID. |
+| routes | The route definitions applied to the route table |
+<!-- END_TF_DOCS -->

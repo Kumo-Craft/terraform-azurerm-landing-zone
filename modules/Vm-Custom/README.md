@@ -150,3 +150,100 @@ module "vm" {
 - **VM name length.** The shared `../Naming` submodule caps the `virtual_machine` type at 15 chars (NetBIOS heritage); long prefixes truncate the workload segment. Pass an explicit `name` if you need the full identifier in the VM resource name.
 - **Trusted Launch** requires a Gen2 / Trusted-Launch-capable image and VM size — set `enable_trusted_launch = false` for Gen1 images.
 - **Encryption at host** requires the `EncryptionAtHost` feature registered on the subscription.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_linux_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine) | resource |
+| [azurerm_managed_disk.data](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/managed_disk) | resource |
+| [azurerm_network_interface.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_interface) | resource |
+| [azurerm_virtual_machine_data_disk_attachment.data](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_data_disk_attachment) | resource |
+| [azurerm_virtual_machine_extension.entra_ssh_login](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/key_vault_secret) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| admin\_ssh\_public\_key | SSH public key (ssh-rsa >= 2048-bit or ssh-ed25519) written to /home/<admin\_username>/.ssh/authorized\_keys. | `string` | n/a | yes |
+| location | Azure region. | `string` | n/a | yes |
+| resource\_group\_name | Resource group name. | `string` | n/a | yes |
+| subnet\_id | Subnet ID for the VM NIC(s). | `string` | n/a | yes |
+| accelerated\_networking\_enabled | Enable Accelerated Networking on the VM NIC. Set false for sizes that do not support SR-IOV. | `bool` | `true` | no |
+| admin\_password\_kv\_id | Optional. Key Vault resource ID holding a local admin password secret. When set (with admin\_password\_secret\_name), password authentication is ENABLED alongside the SSH key. Leave null to keep password auth disabled (recommended). | `string` | `null` | no |
+| admin\_password\_secret\_name | Optional. Name of the Key Vault secret holding the local admin password. Required when admin\_password\_kv\_id is set. | `string` | `null` | no |
+| admin\_username | Local admin username for the Linux VM. | `string` | `"azureadmin"` | no |
+| availability\_zones | Zones to spread VMs across (round-robin). Empty list = no zone placement. | `list(string)` | <pre>[<br>  "1",<br>  "2",<br>  "3"<br>]</pre> | no |
+| boot\_diagnostics\_enabled | Enable boot diagnostics. Uses Azure-managed storage unless boot\_diagnostics\_storage\_account\_uri is set. | `bool` | `true` | no |
+| boot\_diagnostics\_storage\_account\_uri | Custom storage account primary blob endpoint for boot diagnostics. Null = use Azure-managed storage. | `string` | `null` | no |
+| bypass\_platform\_safety\_checks\_on\_user\_schedule | When patch\_mode = AutomaticByPlatform, defer to a user-defined maintenance configuration (Update Manager). | `bool` | `true` | no |
+| computer\_name\_prefix | Optional explicit Linux hostname prefix (the per-VM index is appended). If null, derived from workload/environment or the VM base name. | `string` | `null` | no |
+| data\_disks | Data disks to create and attach to every VM. Map key becomes part of the disk name.<br>Each disk is replicated for every VM in vm\_count.<br>- disk\_size\_gb          : size in GiB<br>- lun                   : LUN (must be unique per VM)<br>- storage\_account\_type  : Standard\_LRS \| StandardSSD\_LRS \| Premium\_LRS \| PremiumV2\_LRS \| UltraSSD\_LRS<br>- caching               : None \| ReadOnly \| ReadWrite<br>- create\_option         : Empty \| Copy \| Restore (defaults to Empty) | <pre>map(object({<br>    disk_size_gb         = number<br>    lun                  = number<br>    storage_account_type = optional(string, "Premium_LRS")<br>    caching              = optional(string, "ReadWrite")<br>    create_option        = optional(string, "Empty")<br>  }))</pre> | `{}` | no |
+| disk\_access\_id | Disk Access resource ID enabling private-endpoint SAS access to data disks. Only applied when disk\_network\_access\_policy = 'AllowPrivate'. | `string` | `null` | no |
+| disk\_encryption\_set\_id | Disk Encryption Set resource ID used to encrypt OS and data disks with a customer-managed key. Null = platform-managed key. | `string` | `null` | no |
+| disk\_network\_access\_policy | Network access policy for data disks (SAS import/export). 'DenyAll' (secure default — no SAS export/import at all), 'AllowPrivate' (SAS only via a Disk Access private endpoint — requires disk\_access\_id), or 'AllowAll'. | `string` | `"DenyAll"` | no |
+| disk\_public\_network\_access\_enabled | Whether data disks are reachable via public network for SAS import/export. Secure default false (blocks public data-plane access — CKV\_AZURE\_251). | `bool` | `false` | no |
+| enable\_trusted\_launch | Enable Trusted Launch (vTPM + Secure Boot). Microsoft-recommended for Gen2 Linux VMs. Requires a Gen2/Trusted Launch capable image and VM size. | `bool` | `true` | no |
+| encryption\_at\_host\_enabled | Enable host-based encryption (encrypts temp disk + OS/data disk caches at the hypervisor layer). CAF secure-by-default = true. Azure platform default is false; enabling on existing VMs requires stop/dealloc. Requires the EncryptionAtHost feature to be registered on the subscription. | `bool` | `true` | no |
+| entra\_ssh\_login\_enabled | Install the AADSSHLoginForLinux extension to enable Microsoft Entra ID SSH login (RBAC: Virtual Machine User/Administrator Login). Requires the SystemAssigned identity (always enabled by this module). | `bool` | `true` | no |
+| environment | n/a | `string` | `null` | no |
+| image | Marketplace image reference. Default: Ubuntu Server 22.04 LTS (Gen2). Ignored when source\_image\_id is set. | <pre>object({<br>    publisher = string<br>    offer     = string<br>    sku       = string<br>    version   = optional(string, "latest")<br>  })</pre> | <pre>{<br>  "offer": "0001-com-ubuntu-server-jammy",<br>  "publisher": "Canonical",<br>  "sku": "22_04-lts-gen2",<br>  "version": "latest"<br>}</pre> | no |
+| image\_plan | Marketplace plan for images that require purchase terms (paid/3rd-party offers). Leave null for first-party images (Ubuntu, RHEL PAYG, etc.). Ignored when source\_image\_id is set. Accept terms once: `az vm image terms accept`. | <pre>object({<br>    name      = string<br>    publisher = string<br>    product   = string<br>  })</pre> | `null` | no |
+| license\_type | Optional Linux license type / Azure Hybrid Benefit. Allowed: RHEL\_BYOS, RHEL\_BASE, RHEL\_EUS, RHEL\_SAPAPPS, RHEL\_SAPHA, RHEL\_BASESAPAPPS, RHEL\_BASESAPHA, SLES\_BYOS, SLES\_SAP, SLES\_HPC, UBUNTU\_PRO. Null = none (PAYG). | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) applied to each VM. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit VM base name override (escape hatch). If set, bypasses ../Naming. If null, uses the canonical convention via ../Naming submodule. | `string` | `null` | no |
+| os\_disk | OS disk configuration. Defaults to Premium\_LRS 64 GiB, ReadWrite caching. | <pre>object({<br>    storage_account_type = optional(string, "Premium_LRS")<br>    caching              = optional(string, "ReadWrite")<br>    disk_size_gb         = optional(number, 64)<br>  })</pre> | `{}` | no |
+| patch\_mode | Patch orchestration mode for Linux. Allowed: 'AutomaticByPlatform' (integrates with Azure Update Manager) or 'ImageDefault'. | `string` | `"AutomaticByPlatform"` | no |
+| region\_code | n/a | `string` | `null` | no |
+| role\_assignments | Map of role assignments to apply at each VM scope (applied to EVERY VM in the pool). Use 'Virtual Machine Administrator Login' / 'Virtual Machine User Login' with Entra SSH login. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| source\_image\_id | Resource ID of a custom image, Shared/Community Image Gallery image, or gallery image version. When set, takes precedence over the marketplace `image`/`image_plan`. | `string` | `null` | no |
+| subscription\_acronym | n/a | `string` | `null` | no |
+| tags | Tags to apply to all resources created by this module. | `map(string)` | `{}` | no |
+| user\_assigned\_identity\_ids | User-Assigned Managed Identity resource IDs to attach to the VM. Empty list = SystemAssigned only. | `list(string)` | `[]` | no |
+| vm\_count | Number of Linux VMs to create. | `number` | `1` | no |
+| vm\_size | VM size. D2s\_v5 is a sensible general-purpose Linux default. | `string` | `"Standard_D2s_v5"` | no |
+| workload | n/a | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| computer\_names | Map of VM suffix => Linux hostname |
+| data\_disk\_ids | Map of '{vm\_suffix}-{disk\_key}' => managed disk resource ID |
+| lock\_ids | Map of VM suffix => management lock ID. Empty map when var.lock is null. |
+| nic\_ids | Map of VM suffix => NIC resource ID |
+| principal\_ids | Map of VM suffix => SystemAssigned identity principal ID (for RBAC grants) |
+| private\_ips | Map of VM suffix => NIC private IP |
+| resources | Map of VM suffix => azurerm\_linux\_virtual\_machine resource object. Marked sensitive because the VM object can carry the admin\_password attribute. |
+| role\_assignment\_ids | Map of composite key ({role\_key}.{vm\_key}) => role assignment ID. Empty map when var.role\_assignments is empty. |
+| vm\_ids | Map of VM suffix => VM resource ID |
+| vm\_names | Map of VM suffix => VM resource name |
+<!-- END_TF_DOCS -->

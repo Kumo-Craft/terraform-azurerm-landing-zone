@@ -89,3 +89,58 @@ The role assignment's ARM resource name is auto-generated as a GUID by Azure on 
 |------|-------------|
 | `id` | Resource ID of the role assignment. |
 | `name` | Name (GUID) of the role assignment. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_role_assignment.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| principal\_id | Object ID of the principal receiving the role (UAMI principal\_id, SP object\_id, Entra group object\_id, user object\_id). | `string` | n/a | yes |
+| scope | Full Azure resource ID at which the role is granted (subscription, RG, or specific resource). | `string` | n/a | yes |
+| condition | Optional ABAC condition expression. Requires condition\_version to be set. | `string` | `null` | no |
+| condition\_version | Version of the ABAC condition. Required when condition is set. Allowed: "1.0" or "2.0". | `string` | `null` | no |
+| delegated\_managed\_identity\_resource\_id | Optional. Resource ID of the delegated managed identity for cross-tenant role assignments. | `string` | `null` | no |
+| description | Free-text description of the role assignment (visible in the Azure portal). Useful to document why a grant exists. | `string` | `null` | no |
+| principal\_type | Type of the principal: User, Group, or ServicePrincipal. Setting this explicitly avoids AAD lookup races on first apply. Pass null to let Azure auto-detect (legacy behavior, may race on first apply). | `string` | `"ServicePrincipal"` | no |
+| role\_definition\_id | Role definition GUID or full resource ID. Use this when the role name is ambiguous OR when targeting a custom role. Mutually exclusive with role\_definition\_name and role\_definition\_id\_or\_name. | `string` | `null` | no |
+| role\_definition\_id\_or\_name | Convenience: pass a role identifier in EITHER form — a built-in role display name<br>(e.g. "Contributor") OR a full role definition path<br>("/providers/Microsoft.Authorization/roleDefinitions/<guid>") — the module dispatches<br>to role\_definition\_id or role\_definition\_name automatically.<br><br>Used by wrapper modules (KeyVault, StorageAccount, etc.) that expose a unified<br>`role_definition_id_or_name` field per role-assignment map entry and forward it here<br>without re-implementing the dispatch logic. Mutually exclusive with role\_definition\_name<br>and role\_definition\_id. | `string` | `null` | no |
+| role\_definition\_name | Built-in or custom role display name (e.g. "Private DNS Zone Contributor"). Mutually exclusive with role\_definition\_id and role\_definition\_id\_or\_name. | `string` | `null` | no |
+| skip\_service\_principal\_aad\_check | Skip the AAD existence check for the principal. Useful when the principal was just created (race on first apply). | `bool` | `false` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | Resource ID of the role assignment. |
+| name | Name (GUID) of the role assignment. |
+| principal\_id | Principal object ID receiving the role. |
+| principal\_type | Resolved principal type (User, Group, ServicePrincipal, …) of the assignment. |
+| role\_definition\_id | Resolved role\_definition\_id passed to azurerm\_role\_assignment (null if the assignment uses role\_definition\_name). |
+| role\_definition\_name | Resolved role\_definition\_name passed to azurerm\_role\_assignment (null if the assignment uses role\_definition\_id). |
+| scope | Scope at which the role is granted. |
+<!-- END_TF_DOCS -->

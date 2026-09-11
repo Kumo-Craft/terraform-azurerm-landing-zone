@@ -90,3 +90,69 @@ inputs = {
 | resource | Complete resource object (**sensitive**) |
 | lock_id | Management lock ID (null if no lock) |
 | role_assignment_ids | Map of role assignment key => ID |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_application_insights.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/application_insights) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| resource\_group\_name | Resource group name | `string` | n/a | yes |
+| workspace\_id | REQUIRED. Resource ID of the Log Analytics workspace backing this workspace-based Application Insights (the telemetry backing store). Classic (non-workspace) App Insights is retired. | `string` | n/a | yes |
+| application\_type | Application type. Defaults to 'web'. | `string` | `"web"` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| internet\_ingestion\_enabled | Whether telemetry ingestion from the public internet is enabled. Default true: private link is enforced on the backing Log Analytics workspace itself. | `bool` | `true` | no |
+| internet\_query\_enabled | Whether querying from the public internet is enabled. Default true: private link is enforced on the backing Log Analytics workspace itself. | `bool` | `true` | no |
+| local\_authentication\_disabled | Optional. Disable non-Entra (local/API-key) authentication. Null = provider default (false). Set true to enforce Entra-only ingestion. | `bool` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the Application Insights component. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name. If null, computed from naming components (appi-{sub}-{env}-{region}-{workload}). | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, frc) | `string` | `null` | no |
+| retention\_in\_days | Data retention in days. Note: ingestion/retention is billed through the backing Log Analytics workspace. | `number` | `90` | no |
+| role\_assignments | Map of role assignments at the Application Insights scope. Common roles: 'Monitoring Reader', 'Monitoring Contributor'. Default principal\_type='ServicePrincipal'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| sampling\_percentage | Optional. Percentage of telemetry sampled (0-100). Null = provider default (100). | `number` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix (e.g. 01, sre-01) | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| app\_id | The Application ID (app\_id) of the Application Insights component |
+| connection\_string | The connection string of the Application Insights component (preferred over the instrumentation key). |
+| id | The ID of the Application Insights component |
+| instrumentation\_key | The instrumentation key of the Application Insights component (legacy; prefer connection\_string). |
+| lock\_id | Management lock ID (null if var.lock is null) |
+| name | The name of the Application Insights component |
+| resource | The complete Application Insights resource object |
+| role\_assignment\_ids | Map of role assignment logical key => role assignment ID |
+<!-- END_TF_DOCS -->

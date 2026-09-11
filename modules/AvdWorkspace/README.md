@@ -120,3 +120,68 @@ inputs = {
 - A workspace exposes **application groups**, not host pools directly. Bind your Desktop and RemoteApp groups via `application_group_associations`.
 - For private connectivity, add a Private Endpoint on the `feed` subresource and leave `public_network_access_enabled = false` (the default).
 - AVD control plane resources (workspace, host pool, app groups) are **regional** — a single workspace can aggregate app groups from multiple regions.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_virtual_desktop_workspace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_desktop_workspace) | resource |
+| [azurerm_virtual_desktop_workspace_application_group_association.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_desktop_workspace_application_group_association) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | ############################################################## REQUIRED VARIABLES ############################################################## | `string` | n/a | yes |
+| resource\_group\_name | n/a | `string` | n/a | yes |
+| application\_group\_associations | Map of application group associations. Key = logical name (e.g. 'desktop-prod-1', 'remoteapp-finance'). Value = the application group's ID (from AvdApplicationGroup.output.id). One association resource created per map entry. AVD architecture: workspace is the user-facing client surface ; app groups are entitlements ; this map binds them. | `map(string)` | `{}` | no |
+| description | n/a | `string` | `null` | no |
+| environment | n/a | `string` | `null` | no |
+| friendly\_name | Display name shown in clients | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the workspace. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit workspace name. If null, computed automatically. | `string` | `null` | no |
+| public\_network\_access\_enabled | Enable public access to the workspace. Set false when using Private Link (feed PE). | `bool` | `false` | no |
+| region\_code | n/a | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the workspace scope. Workspace-level RBAC is less common than app-group-level (per MS Learn) but useful for AVD admin scenarios (e.g. workspace contributor grants). Default principal\_type='Group'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "Group")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | Subscription acronym | `string` | `null` | no |
+| tags | Tags | `map(string)` | `{}` | no |
+| workload | Workload suffix | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| association\_ids | Map of logical association name => association resource ID |
+| id | Workspace resource ID |
+| lock\_id | Management lock ID (null if var.lock is null) |
+| name | Workspace name |
+| resource | Full workspace resource object |
+| role\_assignment\_ids | Map of role assignment logical name => role assignment ID |
+<!-- END_TF_DOCS -->

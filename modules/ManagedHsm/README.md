@@ -103,3 +103,69 @@ module "hsm" {
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: derived naming, name override, optional workload suffix, hardened defaults (purge protection forced, public access off, deny-by-default ACLs, retention 90), optional lock, and validators (empty admins, retention < 7, bad sku, bad ACL action, name too long). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_key_vault_managed_hardware_security_module.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_managed_hardware_security_module) | resource |
+| [azurerm_key_vault_managed_hardware_security_module_role_assignment.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_managed_hardware_security_module_role_assignment) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) | data source |
+| [azurerm_key_vault_managed_hardware_security_module_role_definition.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/key_vault_managed_hardware_security_module_role_definition) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| admin\_object\_ids | Entra ID object IDs of the initial Managed HSM administrators (Crypto Officer/User at the data plane). At least one required. Changing this forces a new resource. | `list(string)` | n/a | yes |
+| location | Azure region where the Managed HSM is deployed. | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the Managed HSM. | `string` | n/a | yes |
+| environment | Environment (e.g. prod, nprd). | `string` | `null` | no |
+| lock | Optional Resource Lock. The resource also carries an unconditional<br>`lifecycle.prevent_destroy` guard at the Terraform level — this variable<br>adds a second, Azure-side guard that survives state loss/refresh.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional explicit name (3-24 chars). If null, computed as mhsm-{acronym}-{env}-{region}[-{workload}]. | `string` | `null` | no |
+| network\_acls | Network ACLs. bypass: AzureServices \| None. default\_action: Allow \| Deny (default Deny — deny-by-default posture). | <pre>object({<br>    bypass         = optional(string, "AzureServices")<br>    default_action = optional(string, "Deny")<br>  })</pre> | `{}` | no |
+| public\_network\_access\_enabled | Allow traffic from public networks. Default false (secure — reach it via Private Endpoint). | `bool` | `false` | no |
+| region\_code | Region code (e.g. gwc, weu). | `string` | `null` | no |
+| role\_assignments | Managed HSM LOCAL RBAC (data-plane) role assignments, keyed by an arbitrary<br>stable key. Each entry sets EXACTLY ONE of role\_definition\_name (built-in)<br>or role\_definition\_id (custom). Built-in role names:<br>  Managed HSM Administrator \| Managed HSM Crypto Officer \|<br>  Managed HSM Crypto User \| Managed HSM Policy Administrator \|<br>  Managed HSM Crypto Auditor \| Managed HSM Crypto Service Encryption User \|<br>  Managed HSM Crypto Service Release User \| Managed HSM Backup \| Managed HSM Restore<br>scope: "/" (HSM-wide), "/keys" (all keys, default), or "/keys/<key-name>".<br>REQUIRES the HSM to be activated (security domain) — typically a second apply. | <pre>map(object({<br>    principal_id         = string<br>    scope                = optional(string, "/keys") # "/" | "/keys" | "/keys/<key-name>"<br>    role_definition_name = optional(string)          # built-in role name (see below)<br>    role_definition_id   = optional(string)          # OR explicit role definition resource id (custom roles)<br>    name                 = optional(string)          # GUID; auto-generated (uuidv5) when null<br>  }))</pre> | `{}` | no |
+| sku\_name | Managed HSM SKU. Only Standard\_B1 is available. | `string` | `"Standard_B1"` | no |
+| soft\_delete\_retention\_days | Soft-delete retention window in days (7-90, default 90). Immutable once set. Soft-delete is always on for Managed HSM. | `number` | `90` | no |
+| subscription\_acronym | Subscription acronym (e.g. idt, con, sec). | `string` | `null` | no |
+| tags | Tags to apply to the Managed HSM. | `map(string)` | `{}` | no |
+| tenant\_id | Entra ID tenant ID for authenticating requests. Null = current tenant (data.azurerm\_client\_config). | `string` | `null` | no |
+| workload | Optional workload suffix segment. Null = omitted from the name (mhsm-{acr}-{env}-{region}). | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| hsm\_uri | The URI of the Managed HSM, used for data-plane key operations. |
+| id | The ID of the Managed HSM. |
+| lock\_ids | Map of management lock IDs (empty when var.lock is null). |
+| name | The name of the Managed HSM. |
+| role\_assignment\_ids | Map of role\_assignments key => local-RBAC role assignment ID (empty when none). |
+<!-- END_TF_DOCS -->

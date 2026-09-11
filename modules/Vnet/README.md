@@ -146,3 +146,77 @@ inputs = {
 | resource | Complete VNet resource object |
 | subnet_ids | Map of subnet name => subnet ID |
 | subnet_names | Map of subnet name => subnet name |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azapi_resource.subnet](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) | resource |
+| [azurerm_virtual_network.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| resource\_group\_name | Resource group name | `string` | n/a | yes |
+| address\_space | VNet CIDR address space (e.g. ["10.238.0.0/22"]) | `list(string)` | `null` | no |
+| ddos\_protection\_plan\_id | DDoS Protection Plan ID to associate with the VNet | `string` | `null` | no |
+| dns\_servers | Custom DNS server IPs. If null or empty, uses Azure default DNS. | `list(string)` | `null` | no |
+| enable\_ddos\_protection | Enable DDoS Standard protection on the VNet. Requires ddos\_protection\_plan\_id. | `bool` | `false` | no |
+| encryption\_enforcement | Optional VNet-level encryption enforcement (VM-to-VM confidential traffic, GA in Azure). 'AllowUnencrypted' = encrypt where possible but allow unencrypted ; 'DropUnencrypted' = require encryption (drops non-encrypted traffic). Set to null to disable VNet encryption (default Azure behavior). | `string` | `null` | no |
+| environment | Environment for naming convention (e.g. prod, nprd) | `string` | `null` | no |
+| flow\_timeout\_in\_minutes | Idle flow timeout for the VNet in minutes (4-30). null = Azure default (4 minutes). Useful for hub VNets with long-lived TCP sessions (e.g. AKS, NFS). | `number` | `null` | no |
+| ip\_address\_pool | Optional Azure IPAM pool configuration for the VNet | <pre>object({<br>    id                     = string<br>    number_of_ip_addresses = number<br>  })</pre> | `null` | no |
+| lock | Controls the Resource Lock configuration for this resource.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit VNet name. If null, computed from naming components. | `string` | `null` | no |
+| region\_code | Region code for naming convention (e.g. gwc, weu) | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the Virtual Network scope. Common patterns: 'Network Contributor' for AKS SP, 'Reader' for Platform team. Default principal\_type='ServicePrincipal' (network resources rarely user-assigned). | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subnets | Optional list of subnets to create within this VNet. When empty, use the separate SubnetWithNsg module. | <pre>list(object({<br>    name                              = string<br>    address_prefixes                  = optional(list(string))<br>    nsg_id                            = optional(string)<br>    service_endpoints                 = optional(list(string))<br>    route_table_id                    = optional(string)<br>    nat_gateway_id                    = optional(string)<br>    ip_address_pool                   = optional(object({ id = string, number_of_ip_addresses = number }))<br>    private_endpoint_network_policies = optional(string)<br>    default_outbound_access_enabled   = optional(bool, false)<br>    delegations = optional(list(object({<br>      name         = string<br>      service_name = string<br>    })), [])<br>  }))</pre> | `[]` | no |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, con, api) | `string` | `null` | no |
+| tags | Tags to assign to the VNet | `map(string)` | `{}` | no |
+| workload | Workload name for naming convention (e.g. hub, spoke) | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The VNet resource ID |
+| location | The VNet Azure region |
+| name | The VNet name |
+| resource | The complete Virtual Network resource object |
+| resource\_group\_name | The VNet resource group name |
+| role\_assignment\_ids | Map of role assignment logical key => role assignment ID |
+| subnet\_ids | Map of subnet name => subnet ID |
+| subnet\_names | Map of subnet name => subnet name |
+| tags | The tags applied to the VNet |
+<!-- END_TF_DOCS -->

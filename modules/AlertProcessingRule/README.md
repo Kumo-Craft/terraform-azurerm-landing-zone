@@ -65,3 +65,60 @@ module "alert_processing_rule" {
 | name | Alert Processing Rule name |
 | resource | Complete resource object |
 | lock_id | Management lock ID (null if no lock) |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_alert_processing_rule_action_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_alert_processing_rule_action_group) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| add\_action\_group\_ids | Action Group resource IDs to add to matching alerts. This is how AMBA-ALZ (policy-deployed alerts with no action group) get routed to notifications. | `list(string)` | n/a | yes |
+| resource\_group\_name | Resource group that HOLDS the Alert Processing Rule resource (not where alerts fire — see var.scopes). | `string` | n/a | yes |
+| scopes | Resource IDs the rule applies to — i.e. the resources on which the alerts<br>FIRE (typically the whole subscription ID, but can be resource groups or<br>individual resources). This is NOT where the alert rules live. All scopes<br>must be within a SINGLE subscription: an APR cannot cross subscription<br>boundaries (Azure Monitor service constraint). | `list(string)` | n/a | yes |
+| condition | Optional condition filters. Null = match all alerts on the scopes. | <pre>object({<br>    alert_context         = optional(object({ operator = string, values = list(string) }))<br>    alert_rule_id         = optional(object({ operator = string, values = list(string) }))<br>    alert_rule_name       = optional(object({ operator = string, values = list(string) }))<br>    description           = optional(object({ operator = string, values = list(string) }))<br>    monitor_condition     = optional(object({ operator = string, values = list(string) }))<br>    monitor_service       = optional(object({ operator = string, values = list(string) }))<br>    severity              = optional(object({ operator = string, values = list(string) }))<br>    signal_type           = optional(object({ operator = string, values = list(string) }))<br>    target_resource       = optional(object({ operator = string, values = list(string) }))<br>    target_resource_group = optional(object({ operator = string, values = list(string) }))<br>    target_resource_type  = optional(object({ operator = string, values = list(string) }))<br>  })</pre> | `null` | no |
+| description | Optional description of the rule. | `string` | `null` | no |
+| enabled | Whether the rule is enabled. | `bool` | `true` | no |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the rule. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name. If null, computed (apr-{sub}-{env}-{region}-{workload}). | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, frc) | `string` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix (e.g. 01) | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The ID of the Alert Processing Rule. |
+| lock\_id | Management lock ID (null if var.lock is null). |
+| name | The name of the Alert Processing Rule. |
+| resource | The complete Alert Processing Rule resource object. |
+<!-- END_TF_DOCS -->

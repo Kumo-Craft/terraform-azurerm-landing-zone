@@ -162,3 +162,65 @@ Each leaf module applies its own type prefix via `../Naming`; the stack just for
 | terraform | >= 1.12.0 |
 | azurerm | ~> 4.0 |
 | time | >= 0.9.0 |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+No providers.
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| application\_group | ../AvdApplicationGroup | n/a |
+| host\_pool | ../AvdHostPool | n/a |
+| scaling\_plan | ../AvdScalingPlan | n/a |
+| session\_host | ../AvdSessionHost | n/a |
+| workspace | ../AvdWorkspace | n/a |
+
+## Resources
+
+No resources.
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment (e.g. nprd, prod). | `string` | n/a | yes |
+| location | Azure region of the AVD control plane. AVD metadata objects are region-bound; session hosts may live elsewhere. | `string` | n/a | yes |
+| region\_code | Region code of the AVD CONTROL PLANE (host pool/workspace/app groups/scaling plan), e.g. weu. | `string` | n/a | yes |
+| resource\_group\_name | Existing resource group for the AVD control-plane objects (host pool, app groups, workspace, scaling plan). | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym (e.g. avd). | `string` | n/a | yes |
+| application\_groups | Map of application groups. Key = logical name (also the naming workload unless overridden, and the workspace association key). Desktop or RemoteApp. Assign 'Desktop Virtualization User' to end-user groups via role\_assignments. | <pre>map(object({<br>    type                         = optional(string, "Desktop")<br>    workload                     = optional(string)<br>    friendly_name                = optional(string)<br>    description                  = optional(string)<br>    default_desktop_display_name = optional(string)<br>    applications = optional(map(object({<br>      name                         = string<br>      path                         = string<br>      command_line_argument_policy = string<br>      friendly_name                = optional(string)<br>      description                  = optional(string)<br>      command_line_arguments       = optional(string)<br>      icon_path                    = optional(string)<br>      icon_index                   = optional(number, 0)<br>      show_in_portal               = optional(bool, true)<br>    })), {})<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "Group")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>  }))</pre> | <pre>{<br>  "desktop": {<br>    "type": "Desktop"<br>  }<br>}</pre> | no |
+| host\_pool | Host pool configuration. A registration token is always created (create\_registration\_info = true) so the session hosts can join. | <pre>object({<br>    workload                      = optional(string)<br>    type                          = optional(string, "Pooled")<br>    load_balancer_type            = optional(string, "BreadthFirst")<br>    maximum_sessions_allowed      = optional(number, 8)<br>    preferred_app_group_type      = optional(string, "Desktop")<br>    start_vm_on_connect           = optional(bool, true)<br>    public_network_access         = optional(string, "Disabled")<br>    custom_rdp_properties         = optional(string)<br>    friendly_name                 = optional(string)<br>    description                   = optional(string)<br>    registration_expiration_hours = optional(number, 48)<br>    scheduled_agent_updates = optional(object({<br>      enabled                   = optional(bool, false)<br>      timezone                  = optional(string)<br>      use_session_host_timezone = optional(bool, false)<br>      schedule = optional(list(object({<br>        day_of_week = string<br>        hour_of_day = number<br>      })), [])<br>    }))<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "Group")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>  })</pre> | `{}` | no |
+| scaling\_plan | Optional autoscale plan bound to the host pool. Null = no scaling plan. schedules is required when set. | <pre>object({<br>    workload      = optional(string, "pooled")<br>    time_zone     = optional(string, "W. Europe Standard Time")<br>    friendly_name = optional(string)<br>    description   = optional(string)<br>    exclusion_tag = optional(string)<br>    enabled       = optional(bool, true) # scaling_plan_enabled on the host pool association<br>    schedules = map(object({<br>      days_of_week                         = set(string)<br>      ramp_up_start_time                   = string<br>      ramp_up_load_balancing_algorithm     = string<br>      ramp_up_minimum_hosts_percent        = optional(number)<br>      ramp_up_capacity_threshold_percent   = optional(number)<br>      peak_start_time                      = string<br>      peak_load_balancing_algorithm        = string<br>      ramp_down_start_time                 = string<br>      ramp_down_load_balancing_algorithm   = string<br>      ramp_down_minimum_hosts_percent      = number<br>      ramp_down_capacity_threshold_percent = number<br>      ramp_down_force_logoff_users         = bool<br>      ramp_down_wait_time_minutes          = number<br>      ramp_down_notification_message       = string<br>      ramp_down_stop_hosts_when            = string<br>      off_peak_start_time                  = string<br>      off_peak_load_balancing_algorithm    = string<br>    }))<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "Group")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>  })</pre> | `null` | no |
+| session\_host | Session host configuration. Null = deploy the control plane only (add hosts later). When set, subnet\_id, admin\_password\_kv\_id and fslogix\_vhd\_location are required. Override resource\_group\_name/location/region\_code to place hosts in a different (e.g. gwc) RG/region than the control plane. | <pre>object({<br>    # Placement overrides (default to the control-plane RG/region).<br>    resource_group_name = optional(string)<br>    location            = optional(string)<br>    region_code         = optional(string)<br>    workload            = optional(string, "sh")<br><br>    # Required.<br>    subnet_id            = string<br>    admin_password_kv_id = string<br>    fslogix_vhd_location = string<br><br>    # VM sizing / image.<br>    vm_count                       = optional(number, 1)<br>    vm_size                        = optional(string, "Standard_D4s_v5")<br>    availability_zones             = optional(list(string), ["1", "2", "3"])<br>    accelerated_networking_enabled = optional(bool, true)<br>    image = optional(object({<br>      publisher = string<br>      offer     = string<br>      sku       = string<br>      version   = optional(string, "latest")<br>      }), {<br>      publisher = "microsoftwindowsdesktop"<br>      offer     = "windows-11"<br>      sku       = "win11-24h2-avd"<br>      version   = "latest"<br>    })<br>    image_plan = optional(object({<br>      name      = string<br>      publisher = string<br>      product   = string<br>    }))<br>    source_image_id = optional(string)<br>    os_disk = optional(object({<br>      storage_account_type = optional(string, "Premium_LRS")<br>      caching              = optional(string, "ReadWrite")<br>      disk_size_gb         = optional(number, 128)<br>      ephemeral            = optional(bool, true)<br>    }), {})<br><br>    # Identity / OS.<br>    admin_username             = optional(string, "azureadmin")<br>    admin_password_secret_name = optional(string, "sh-local-admin-password")<br>    computer_name_prefix       = optional(string)<br>    enable_trusted_launch      = optional(bool, true)<br>    encryption_at_host_enabled = optional(bool, true)<br>    license_type               = optional(string, "Windows_Client")<br>    patch_mode                 = optional(string, "AutomaticByPlatform")<br>    fslogix_profile_size_mb    = optional(number, 30000)<br><br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "Group")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>  })</pre> | `null` | no |
+| tags | Tags applied to every resource in the stack. | `map(string)` | `{}` | no |
+| workload | Workload suffix for the control-plane objects (host pool, workspace, scaling plan) unless overridden per component. | `string` | `"avd"` | no |
+| workspace | Workspace configuration. All application\_groups are associated to it automatically. | <pre>object({<br>    workload                      = optional(string)<br>    friendly_name                 = optional(string)<br>    description                   = optional(string)<br>    public_network_access_enabled = optional(bool, false)<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "Group")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>  })</pre> | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| application\_group\_ids | Map of application group key => resource ID. |
+| application\_group\_names | Map of application group key => name. |
+| host\_pool\_id | Host pool resource ID. |
+| host\_pool\_name | Host pool name. |
+| host\_pool\_registration\_token | Host pool registration token (sensitive). |
+| scaling\_plan\_id | Scaling plan resource ID, or null when no scaling plan was created. |
+| session\_host\_vm\_ids | Map of session host VM index => VM ID, or null when no session hosts were created. |
+| session\_host\_vm\_names | Map of session host VM index => VM name, or null when no session hosts were created. |
+| workspace\_id | Workspace resource ID. |
+| workspace\_name | Workspace name. |
+<!-- END_TF_DOCS -->

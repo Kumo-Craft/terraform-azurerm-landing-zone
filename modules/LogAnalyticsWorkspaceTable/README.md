@@ -47,3 +47,44 @@ module "law_tables" {
 |------|-------------|
 | table_ids | Map of table name => table resource ID |
 | table_plans | Map of table name => effective plan |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_log_analytics_workspace_table.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/log_analytics_workspace_table) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| workspace\_id | Resource ID of the Log Analytics workspace whose tables are managed. | `string` | n/a | yes |
+| tables | Map of workspace tables whose plan / retention is managed. The map key is the<br>exact table name (e.g. "AKSAuditAdmin", "AKSControlPlane"). Only tables that<br>already exist in the workspace can be managed — resource-specific AKS* tables<br>appear only once the AKS diagnostic setting is in "Dedicated" mode.<br><br>- `plan`                    - (Optional) "Analytics" (default), "Basic" or "Auxiliary".<br>- `retention_in_days`       - (Optional) Interactive retention. ONLY valid for the<br>                              Analytics plan (Basic/Auxiliary use a fixed interactive<br>                              retention). Null = workspace default.<br>- `total_retention_in_days` - (Optional) Total (incl. archive/long-term) retention.<br>                              Valid for all plans. Null = workspace default. | <pre>map(object({<br>    plan                    = optional(string, "Analytics")<br>    retention_in_days       = optional(number, null)<br>    total_retention_in_days = optional(number, null)<br>  }))</pre> | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| table\_ids | Map of table name => azurerm\_log\_analytics\_workspace\_table ID. |
+| table\_plans | Map of table name => effective plan. |
+<!-- END_TF_DOCS -->
