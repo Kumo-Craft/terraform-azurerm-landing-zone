@@ -112,3 +112,81 @@ inputs = {
 | resource_group_name | The name of the resource group |
 | resource_group_id | Resource Group ID (inline-created or caller-provided, always populated) |
 | lock_ids | Map of lock key => lock resource ID (keys: law, rg). Empty map when lock = null. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| alz\_management | Azure/avm-ptn-alz-management/azurerm | 0.9.0 |
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| naming\_component | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment (e.g. prod, nprd) | `string` | n/a | yes |
+| location | Azure region | `string` | n/a | yes |
+| region\_code | Region code (e.g. gwc, weu) | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | n/a | yes |
+| aa\_public\_network\_access\_enabled | Allow public network access on Automation Account. Set to false for AMPLS. | `bool` | `false` | no |
+| create\_resource\_group | If true, creates the resource group inline. If false, resource\_group\_name must reference an existing RG. | `bool` | `false` | no |
+| enable\_cmk | Enable Customer Managed Keys for encryption | `bool` | `false` | no |
+| enable\_sentinel | Onboard Microsoft Sentinel on this workspace. Set false when Sentinel lives in a dedicated Security subscription (CAF alignment). | `bool` | `true` | no |
+| law\_internet\_ingestion\_enabled | Enable internet ingestion on LAW. Set to false after Private Endpoints are deployed. | `bool` | `true` | no |
+| law\_internet\_query\_enabled | Enable internet query on LAW. Set to false after Private Endpoints are deployed. | `bool` | `true` | no |
+| law\_local\_authentication\_enabled | Allow local (shared key) authentication on LAW. Best practice: false to force Azure AD only. | `bool` | `false` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the Management LAW and Resource Group. Set to null to skip. Same kind applied to both LAW and RG. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| log\_daily\_quota\_gb | Daily ingestion cap in GB. Use -1 for NO cap (unlimited); otherwise must be >= 1. | `number` | `10` | no |
+| log\_ingestion\_gb\_per\_day | Expected log ingestion per day in GB (for SKU selection). >100 = CapacityReservation | `number` | `5` | no |
+| log\_retention\_days | Log Analytics retention in days. ALZ baseline recommends >= 90 days (Microsoft ALZ Management & Monitoring design area). Free retention tier is 31 days; costs apply beyond that. | `number` | `90` | no |
+| resource\_group\_name | Resource group name. Required when create\_resource\_group = false. | `string` | `null` | no |
+| resource\_group\_workload | Workload name for RG naming convention when create\_resource\_group = true. | `string` | `"management"` | no |
+| tags | Tags to apply to all resources | `map(string)` | `{}` | no |
+| workload | Workload suffix for naming | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ama\_identity\_id | The ID of the AMA User Assigned Identity |
+| automation\_account\_id | The ID of the Automation Account (null — no AA is created). |
+| automation\_account\_name | The name of the Automation Account (null — no AA is created). |
+| dcr\_change\_tracking\_id | Resource ID of the Change Tracking & Inventory Data Collection Rule. |
+| dcr\_defender\_sql\_id | Resource ID of the Defender for SQL Data Collection Rule. |
+| dcr\_vm\_insights\_id | Resource ID of the VM Insights Data Collection Rule. |
+| law\_id | The ID of the Log Analytics Workspace |
+| law\_name | The name of the Log Analytics Workspace |
+| law\_workspace\_id | The Workspace ID (GUID) of the Log Analytics Workspace |
+| lock\_ids | Map of lock key => lock resource ID (keys: law, rg). Empty map when var.lock = null. |
+| resource\_group\_id | Resource Group ID. Returns the inline-created RG ID OR the caller-provided RG ID via AVM's resource\_group output. |
+| resource\_group\_name | The name of the resource group |
+<!-- END_TF_DOCS -->

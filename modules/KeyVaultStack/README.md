@@ -147,3 +147,80 @@ inputs = {
 | private_endpoint_ip | The private IP of the PE |
 
 > **Note**: `resource_group_id` and `private_endpoint_connection_status` outputs were removed in v0.2.2 — the Stack no longer owns the RG and no longer reads the PE connection status via a data source. Get the RG id from your upstream `../ResourceGroup` module instance.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| kv | ../KeyVault | n/a |
+| pe | ../PrivateEndpoint | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment for naming convention (e.g. prod, nprd) | `string` | n/a | yes |
+| location | Azure region where the Key Vault and Private Endpoint will be deployed. | `string` | n/a | yes |
+| region\_code | Region code for naming convention (e.g. gwc, weu) | `string` | n/a | yes |
+| resource\_group\_name | Name of the resource group in which to create the Key Vault and Private Endpoint. Must be caller-provided — KVStack no longer creates its own RG since v0.2.2 (same convention as NetworkWatcher v0.2.1, KeyVault, StorageAccount, etc.). Typically wired from a `../ResourceGroup` module instance in the consumer's Terragrunt config. | `string` | n/a | yes |
+| subnet\_id | Subnet ID for the Key Vault Private Endpoint | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. api, mgm, con) | `string` | n/a | yes |
+| workload | Workload name for naming convention. Keep short (max 24 chars total for KV name). | `string` | n/a | yes |
+| assign\_rbac\_to\_current\_user | Forwarded to the canonical ../KeyVault module's `assign_rbac_to_current_user`<br>input. **Default: false** to align with the canonical KV's secure-by-default<br>posture (see modules/KeyVault/README.md — Prerequisites section). The<br>recommended Azure-native pattern is to grant the Terraform SPN<br>`Key Vault Administrator` inherited from the Management Group / Subscription<br>scope ONCE, so it applies to every KV deployed without per-KV state pollution.<br><br>Set to `true` only when:<br>- The deployer cannot be granted inherited MG/Sub-level RBAC, AND<br>- You need the deployer to manage child resources (keys, secrets, certs) in<br>  the same plan.<br><br>Trade-off when `true`: every KV records an explicit role assignment for the<br>deployer identity in state — auditability cost, and that identity remains<br>admin on the KV permanently unless explicitly revoked. | `bool` | `false` | no |
+| enable\_rbac | Enable RBAC authorization (recommended over access policies) | `bool` | `true` | no |
+| enabled\_for\_deployment | Enable VMs to retrieve certificates stored as secrets | `bool` | `false` | no |
+| enabled\_for\_disk\_encryption | Enable Azure Disk Encryption to retrieve secrets and unwrap keys | `bool` | `false` | no |
+| enabled\_for\_template\_deployment | Enable ARM templates to retrieve secrets | `bool` | `false` | no |
+| kv\_admin\_group\_object\_id | Object ID of an Entra group to grant Key Vault Administrator at the Key Vault scope. Recommended over assign\_rbac\_to\_current\_user for pipeline-driven deployments where the deployer identity changes between runs. Forwarded to the canonical KV's role\_assignments map as an `admin_group` entry. | `string` | `null` | no |
+| kv\_name | Optional. Explicit Key Vault name (3-24 chars). If null, computed. | `string` | `null` | no |
+| kv\_suffix | Optional. Suffix for the KV and PE name. If null, uses the workload. | `string` | `null` | no |
+| network\_acls | Network ACLs configuration for Key Vault firewall | <pre>object({<br>    default_action = string<br>    bypass         = string<br>    ip_rules       = optional(list(string), [])<br>    subnet_ids     = optional(list(string), [])<br>  })</pre> | `null` | no |
+| pe\_custom\_network\_interface\_name | Optional. Custom network interface name for the Private Endpoint. | `string` | `null` | no |
+| pe\_private\_ip\_address | Optional. Static private IP for the Private Endpoint. | `string` | `null` | no |
+| private\_dns\_zone\_ids | Private DNS Zone IDs for the Private Endpoint (e.g. privatelink.vaultcore.azure.net) | `list(string)` | `null` | no |
+| public\_network\_access\_enabled | Enable public network access (disable in production) | `bool` | `false` | no |
+| purge\_protection\_enabled | Enable purge protection (IRREVERSIBLE once enabled) | `bool` | `true` | no |
+| sku\_name | SKU name: 'standard' or 'premium' (HSM-backed) | `string` | `"premium"` | no |
+| soft\_delete\_retention\_days | Number of days to retain soft-deleted Key Vault (7-90) | `number` | `90` | no |
+| tags | Tags to apply to all resources | `map(string)` | `{}` | no |
+| tenant\_id | Azure AD tenant ID for the Key Vault (auto-detected if null) | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| key\_vault\_id | The Key Vault resource ID |
+| key\_vault\_name | The Key Vault name |
+| key\_vault\_resource | The complete Key Vault resource object |
+| key\_vault\_tenant\_id | The Key Vault tenant ID |
+| key\_vault\_uri | The Key Vault URI (e.g., https://kv-name.vault.azure.net/) |
+| private\_endpoint\_id | The Private Endpoint resource ID |
+| private\_endpoint\_ip | The private IP address of the Private Endpoint |
+| private\_endpoint\_name | The Private Endpoint name |
+| resource\_group\_name | The name of the resource group (caller-provided). |
+<!-- END_TF_DOCS -->

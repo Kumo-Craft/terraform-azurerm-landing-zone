@@ -110,3 +110,80 @@ Same as the `../ManagedHsm` leaf: **security-domain activation** (3-10 KV certs 
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: HSM+PE composition, name wiring (HSM + PE, incl. optional workload), `managedhsm` sub-resource, and Stack-specific validators (subnet id, PE IP). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| backup\_identity | ../ManagedIdentity | n/a |
+| hsm | ../ManagedHsm | n/a |
+| pe | ../PrivateEndpoint | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| admin\_object\_ids | Entra object IDs of the initial Managed HSM administrators (>= 1). Forwarded to ../ManagedHsm. | `list(string)` | n/a | yes |
+| location | Azure region where the Managed HSM and Private Endpoint are deployed. | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the Managed HSM and Private Endpoint (caller-provided, typically from a ../ResourceGroup module instance). | `string` | n/a | yes |
+| subnet\_id | Subnet ID for the Managed HSM Private Endpoint. | `string` | n/a | yes |
+| backup\_identity\_name | Optional name override for the backup UAMI. Null = id-{hsm\_name}-backup. | `string` | `null` | no |
+| backup\_storage\_scope\_id | Optional resource ID of the backup storage account (or blob container) to grant the backup UAMI 'Storage Blob Data Contributor'. Null = no role assignment (grant it out-of-band). Ignored when enable\_backup\_identity = false. | `string` | `null` | no |
+| enable\_backup\_identity | Create a user-assigned managed identity (via ../ManagedIdentity) for Managed HSM full backup/restore. Default false. | `bool` | `false` | no |
+| environment | Environment (e.g. prod, nprd). Forwarded to ../ManagedHsm. | `string` | `null` | no |
+| lock | Optional Resource Lock on the Managed HSM. Forwarded to ../ManagedHsm (on top of its prevent\_destroy). | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional explicit Managed HSM name (3-24 chars). Null = derived by ../ManagedHsm as mhsm-{acr}-{env}-{region}[-{workload}]. | `string` | `null` | no |
+| network\_acls | Network ACLs (bypass: AzureServices\|None, default\_action: Allow\|Deny). Forwarded to ../ManagedHsm. | <pre>object({<br>    bypass         = optional(string, "AzureServices")<br>    default_action = optional(string, "Deny")<br>  })</pre> | `{}` | no |
+| pe\_custom\_network\_interface\_name | Optional custom network interface name for the Private Endpoint. | `string` | `null` | no |
+| pe\_private\_ip\_address | Optional static private IP for the Private Endpoint. | `string` | `null` | no |
+| private\_dns\_zone\_ids | Private DNS Zone IDs for the Private Endpoint (use the privatelink.managedhsm.azure.net zone). Null = no DNS zone group (wire DNS elsewhere). | `list(string)` | `null` | no |
+| public\_network\_access\_enabled | Allow public network access. Default false (reach via the composed Private Endpoint). Forwarded to ../ManagedHsm. | `bool` | `false` | no |
+| region\_code | Region code (e.g. gwc, weu). Forwarded to ../ManagedHsm. | `string` | `null` | no |
+| role\_assignments | Managed HSM LOCAL RBAC (data-plane) role assignments. Forwarded to ../ManagedHsm — see its README. NOTE: requires the HSM to be activated (security domain) first; typically a second apply. | <pre>map(object({<br>    principal_id         = string<br>    scope                = optional(string, "/keys")<br>    role_definition_name = optional(string)<br>    role_definition_id   = optional(string)<br>    name                 = optional(string)<br>  }))</pre> | `{}` | no |
+| sku\_name | Managed HSM SKU (only Standard\_B1). Forwarded to ../ManagedHsm. | `string` | `"Standard_B1"` | no |
+| soft\_delete\_retention\_days | Soft-delete retention (7-90, default 90). Forwarded to ../ManagedHsm. | `number` | `90` | no |
+| subscription\_acronym | Subscription acronym (e.g. idt, con, sec). Forwarded to ../ManagedHsm. | `string` | `null` | no |
+| tags | Tags applied to the Managed HSM and Private Endpoint. | `map(string)` | `{}` | no |
+| tenant\_id | Tenant ID. Null = current tenant (resolved by ../ManagedHsm). | `string` | `null` | no |
+| workload | Optional workload suffix segment. Forwarded to ../ManagedHsm. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| backup\_identity\_client\_id | Client ID of the backup UAMI (null when disabled). |
+| backup\_identity\_id | Resource ID of the backup UAMI (null when disabled). Associate it to the HSM via `az keyvault update-hsm --mi-user-assigned <this>`. |
+| backup\_identity\_principal\_id | Principal (object) ID of the backup UAMI (null when disabled). |
+| hsm\_id | The Managed HSM resource ID. |
+| hsm\_lock\_ids | Map of Managed HSM management lock IDs (empty when lock is null). |
+| hsm\_name | The Managed HSM name. |
+| hsm\_role\_assignment\_ids | Map of role\_assignments key => local-RBAC role assignment ID (empty when none). |
+| hsm\_uri | The Managed HSM URI, used for data-plane key operations. |
+| private\_endpoint\_id | The Private Endpoint resource ID. |
+| private\_endpoint\_ip | The private IP address of the Private Endpoint. |
+| private\_endpoint\_name | The Private Endpoint name. |
+| resource\_group\_name | The name of the resource group (caller-provided). |
+<!-- END_TF_DOCS -->

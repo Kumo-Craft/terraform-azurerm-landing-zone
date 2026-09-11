@@ -139,3 +139,52 @@ Set `resolution_policy = "NxDomainRedirect"` on a VNet link to enable Azure's na
 - Requires Microsoft.Network API `2024-06-01`+ — the pinned AVM module (`~> 0.23`) already targets a compatible version; no `azapi` pin is needed here.
 - The AVM module applies a non-`Default` policy **only to zones that actually support Private Link**; zones that don't support it silently ignore the setting, so a blanket `NxDomainRedirect` across all links is safe.
 - Reference: [Fallback to internet for Azure Private DNS zones](https://learn.microsoft.com/azure/dns/private-dns-fallback).
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azapi | ~> 2.4 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| time | >= 0.9 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| private\_dns\_zones | Azure/avm-ptn-network-private-link-private-dns-zones/azurerm | ~> 0.23 |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| resource\_group\_id | Existing resource group resource ID (caller-provided). Wired as `parent_id` to the AVM ptn module. Caller usually obtains this from their ../ResourceGroup module call (e.g. `module.dns_rg.id`). | `string` | n/a | yes |
+| resource\_group\_name | Existing resource group name (caller-provided). PrivateDnsZones v0.2.9 no longer creates the RG — caller must supply an existing one (typically via ../ResourceGroup in their root module). | `string` | n/a | yes |
+| lock | Optional management lock on the hosting resource group (passes through to the AVM ptn module). Standard house shape — kind in {CanNotDelete, ReadOnly}. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| tags | Tags | `map(string)` | `{}` | no |
+| virtual\_network\_links | VNets to link to all DNS zones. Key = logical name, value.virtual\_network\_resource\_id = VNet resource ID.<br><br>resolution\_policy (optional): "Default" \| "NxDomainRedirect". NxDomainRedirect = "fallback to<br>internet" on the VNet link — when an authoritative NXDOMAIN is returned for a private-link zone,<br>the Azure recursive resolver retries public recursion. The AVM module only applies a non-Default<br>policy to zones that actually support Private Link; zones that don't support it silently ignore<br>it, so a blanket NxDomainRedirect is safe. Requires Microsoft.Network API 2024-06-01+ (the AVM<br>module already targets a compatible version). | <pre>map(object({<br>    virtual_network_resource_id = string<br>    resolution_policy           = optional(string)<br>  }))</pre> | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| private\_dns\_zone\_resource\_ids | Map of private DNS zone names to their resource IDs |
+| resource\_group\_name | The name of the DNS resource group (passed through from caller) |
+<!-- END_TF_DOCS -->

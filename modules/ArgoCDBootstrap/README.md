@@ -120,3 +120,60 @@ inputs = {
 |----------|-------------|
 | `kubernetes_secret_v1.repo` | Kubernetes Secret in the Argo CD namespace carrying the Git repo URL, username, and PAT. Labelled `argocd.argoproj.io/secret-type: repository` for auto-discovery by Argo CD. |
 | `kubernetes_manifest.application` | Argo CD `Application` CRD (`argoproj.io/v1alpha1`) pointing at the configured repo path with automated sync, prune, and self-heal policies. |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| kubernetes | ~> 3.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| kubernetes | ~> 3.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [kubernetes_manifest.application](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
+| [kubernetes_secret_v1.repo](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret_v1) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| repo\_pat | Personal Access Token (or password) used to authenticate Argo CD to the Git repository. Must have Code: Read scope on the target repo. | `string` | n/a | yes |
+| repo\_url | Full HTTPS URL of the Git repository Argo CD will pull (e.g. https://dev.azure.com/<org>/<project>/\_git/<repo>). | `string` | n/a | yes |
+| application\_name | Name of the Argo CD Application CRD. | `string` | `"platform"` | no |
+| application\_path | Path inside the Git repository that Argo CD reconciles. Typically `platform/` for the bootstrap manifest set. | `string` | `"platform"` | no |
+| application\_target\_revision | Git revision (branch, tag, commit SHA) that Argo CD watches. HEAD = always reconcile from the default branch tip. | `string` | `"HEAD"` | no |
+| argocd\_namespace | Namespace where Argo CD is installed (where the repo secret and Application CRD are created). | `string` | `"argocd"` | no |
+| argocd\_project | Name of the Argo CD AppProject the Application belongs to. Default 'default' allows any repo/destination; production deployments should use a custom AppProject with source/destination restrictions. | `string` | `"default"` | no |
+| destination\_namespace | Default destination namespace for manifests in the Application path that omit their own namespace metadata. Per-resource `metadata.namespace` overrides this. | `string` | `"argocd"` | no |
+| directory\_recurse | When true, Argo CD discovers manifests recursively under `application_path`. Required if you organise manifests in subdirectories (e.g. platform/ingresses/, platform/network-policies/, ...). Default true — platform/ usually has subfolders. | `bool` | `true` | no |
+| repo\_secret\_name | Name of the Kubernetes Secret holding the repo credentials. Must be unique within the `argocd` namespace. | `string` | `"argocd-platform-manifests-repo"` | no |
+| repo\_username | Username paired with the PAT. For Azure DevOps PATs the value is ignored by the server but must be non-empty (any string works). | `string` | `"argocd"` | no |
+| sync\_policy\_prune | Delete resources from the cluster when they are removed from the Git repo. | `bool` | `true` | no |
+| sync\_policy\_self\_heal | Revert manual drift on the cluster back to the Git-declared state. | `bool` | `true` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| application | The kubernetes\_manifest resource for the Argo CD Application CRD. Non-sensitive — manifest contains no secret data. |
+| application\_name | Name of the Argo CD Application CRD. |
+| application\_path | Path inside the repo that the Application reconciles. |
+| application\_repo\_url | Repo URL the Application watches. |
+| repo\_secret\_name | Name of the Kubernetes Secret holding the repo credentials. |
+| resource | The kubernetes\_secret\_v1 resource holding the Argo CD repository credentials. Sensitive: contains the PAT data. |
+<!-- END_TF_DOCS -->

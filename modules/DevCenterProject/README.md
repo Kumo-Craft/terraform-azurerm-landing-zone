@@ -158,3 +158,70 @@ module "dev_center_project_teama" {
 - **`dev_center_id`, `name`, `description` are ForceNew** — changing any of them recreates the project.
 - **Name length.** A `precondition` enforces 3-63 chars on the composed name — shorten `workload` or pass an explicit `name`.
 - **Downstream.** Pools (`azurerm_dev_center_project_pool`) and dev box definitions are separate resources that reference this project's `id`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| role\_assignments | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_dev_center_project.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/dev_center_project) | resource |
+| [azurerm_dev_center_project_environment_type.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/dev_center_project_environment_type) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| dev\_center\_id | Resource ID of the parent Dev Center (e.g. module.dev\_center.id). Changing this forces a new project. | `string` | n/a | yes |
+| location | Azure region where the project will be deployed (typically the same region as the Dev Center). | `string` | n/a | yes |
+| resource\_group\_name | Name of the resource group | `string` | n/a | yes |
+| description | Optional description of the project. Changing this forces a new project. | `string` | `null` | no |
+| environment | Environment for naming convention (e.g. prod, nprd) | `string` | `null` | no |
+| environment\_types | Project environment types to enable, keyed by name. The key MUST match a<br>Dev Center environment type name (created via the DevCenter module's<br>`environment_types`). This is what makes an environment deployable.<br><br>Per-entry fields:<br>- `deployment_target_id`          - (Required) Subscription ID where this environment type's<br>                                     resources are deployed (e.g. /subscriptions/<sub>).<br>- `creator_role_assignment_roles` - (Optional) Role definition IDs (GUIDs) granted to the<br>                                     environment CREATOR on the target subscription (e.g. the<br>                                     Owner role id "8e3af657-a8ff-443c-a75c-2fe8c4bcb635").<br>- `user_role_assignments`         - (Optional) Map of user/principal object ID => list of role<br>                                     definition IDs, granting standing access on the target sub.<br>- `identity`                      - (Optional) Deployment identity for this environment type<br>                                     (default SystemAssigned). This identity needs Contributor +<br>                                     User Access Administrator on `deployment_target_id`.<br>- `tags`                          - (Optional) Per-environment-type tags. | <pre>map(object({<br>    deployment_target_id          = string<br>    creator_role_assignment_roles = optional(list(string), [])<br>    user_role_assignments         = optional(map(list(string)), {})<br>    identity = optional(object({<br>      type         = optional(string, "SystemAssigned")<br>      identity_ids = optional(list(string), [])<br>    }), {})<br>    tags = optional(map(string), {})<br>  }))</pre> | `{}` | no |
+| identity | Managed identity for the project. Recommended: the project identity is what<br>deploys environment types and reads project-level catalogs / Key Vault secrets.<br>As a security best practice, use a project identity that is MORE restricted than<br>the Dev Center identity.<br><br>Default is SystemAssigned. If BOTH a system-assigned and a user-assigned identity<br>are attached, the project uses ONLY the user-assigned identity.<br><br>- `type`         - (Required) 'SystemAssigned', 'UserAssigned', or 'SystemAssigned, UserAssigned'.<br>- `identity_ids` - (Optional) User Assigned Managed Identity IDs. Required when type includes 'UserAssigned'. | <pre>object({<br>    type         = string<br>    identity_ids = optional(list(string), [])<br>  })</pre> | <pre>{<br>  "type": "SystemAssigned"<br>}</pre> | no |
+| lock | Optional management lock on the project.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| maximum\_dev\_boxes\_per\_user | Optional cap on the number of Dev Boxes a single user can create across all pools in the project. Null = no limit. | `number` | `null` | no |
+| name | Optional. Explicit Dev Center Project name (3-63 chars, start with a letter, letters/digits/hyphens). If null, computed as dcp-{acr}-{env}-{region}-{workload}. | `string` | `null` | no |
+| region\_code | Region code for naming convention (e.g. gwc, weu) | `string` | `null` | no |
+| role\_assignments | A map of role assignments to create on this project. The map key is arbitrary.<br>Typical project-scoped roles: "DevCenter Project Admin", "DevCenter Dev Box User",<br>"Deployment Environments User".<br><br>- `role_definition_id_or_name`             - (Required) The ID or name of the role definition.<br>- `principal_id`                           - (Required) The ID of the principal.<br>- `principal_type`                         - (Optional) User, Group or ServicePrincipal.<br>- `condition`                              - (Optional) ABAC condition.<br>- `condition_version`                      - (Optional) Condition version ("1.0" or "2.0").<br>- `description`                            - (Optional) Description.<br>- `skip_service_principal_aad_check`       - (Optional) Skip AAD check.<br>- `delegated_managed_identity_resource_id` - (Optional) Cross-tenant delegated MI. | <pre>map(object({<br>    role_definition_id_or_name             = string<br>    principal_id                           = string<br>    principal_type                         = optional(string)<br>    condition                              = optional(string)<br>    condition_version                      = optional(string)<br>    description                            = optional(string)<br>    skip_service_principal_aad_check       = optional(bool, false)<br>    delegated_managed_identity_resource_id = optional(string)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | Subscription acronym for naming convention (e.g. mgm, api) | `string` | `null` | no |
+| tags | Tags to apply to the project | `map(string)` | `{}` | no |
+| workload | Workload / team name for naming convention. Keep short — composed name must be <= 63 chars. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| dev\_center\_uri | The URI of the Dev Center this project is associated with |
+| environment\_type\_identity\_principal\_ids | Map of environment type name => deployment identity principal ID (null when no system-assigned identity). Grant Contributor + User Access Administrator on the target subscription. |
+| environment\_type\_ids | Map of environment type name => Dev Center Project Environment Type resource ID. |
+| id | The Dev Center Project resource ID |
+| identity\_principal\_id | The system-assigned managed identity principal ID of the project (null when no system-assigned identity). Grant it RBAC on deployment subscriptions / project catalogs. |
+| identity\_tenant\_id | The tenant ID of the project managed identity (null when no system-assigned identity). |
+| name | The Dev Center Project name |
+| resource | The complete Dev Center Project resource object |
+<!-- END_TF_DOCS -->

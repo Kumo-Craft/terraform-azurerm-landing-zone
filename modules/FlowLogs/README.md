@@ -159,3 +159,64 @@ inputs = {
   Note: Most callers expecting "no retention / clean up immediately" should instead configure a lifecycle management policy on the Storage Account rather than relying on `retention_days = 0`.
 - **Storage account constraints**: Microsoft Flow Logs service requires shared-key auth and writes from Microsoft-managed infrastructure. The MCSB shared-key / VNet-rule / Private-Link checks on this storage account are by-design exempted.
 - **Traffic Analytics**: requires both the workspace GUID (`workspace_id`) and the ARM resource ID (`workspace_resource_id`). Both are available from the LAW module outputs.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_network_watcher_flow_log.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_watcher_flow_log) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| network\_watcher\_name | Name of the Network Watcher to host the flow log resources | `string` | n/a | yes |
+| network\_watcher\_resource\_group\_name | Resource group of the Network Watcher | `string` | n/a | yes |
+| storage\_account\_id | Storage Account resource ID for flow log data | `string` | n/a | yes |
+| vnets | Map of VNets to enable flow logs on. Key = short name used in the flow log resource name. | <pre>map(object({<br>    id      = string<br>    enabled = optional(bool, true)<br>    # F-3: per-entry name override<br>    name = optional(string)<br>    # F-5: per-entry lock<br>    lock = optional(object({<br>      kind = string<br>      name = optional(string)<br>    }))<br>    # F-6: per-entry role assignments<br>    role_assignments = optional(map(object({<br>      role_definition_id_or_name       = string<br>      principal_id                     = string<br>      principal_type                   = optional(string, "ServicePrincipal")<br>      condition                        = optional(string)<br>      condition_version                = optional(string)<br>      description                      = optional(string)<br>      skip_service_principal_aad_check = optional(bool, false)<br>    })), {})<br>  }))</pre> | n/a | yes |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| retention\_days | Number of days to retain flow logs in the storage account (0 = forever / SA lifecycle policy) | `number` | `90` | no |
+| subscription\_acronym | Subscription acronym (e.g. con, mgm, api) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| traffic\_analytics | Traffic Analytics configuration. Set to null to disable. | <pre>object({<br>    enabled               = optional(bool, true)<br>    workspace_id          = string<br>    workspace_region      = string<br>    workspace_resource_id = string<br>    interval_minutes      = optional(number, 60)<br>  })</pre> | `null` | no |
+| workload | Workload component for naming convention fl-{acr}-{env}-{region}-{workload}-{vnet\_key}. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| ids | Map of VNet key to flow log resource ID |
+| lock\_ids | Map of VNet key to management lock resource ID (only entries that have a lock configured) |
+| names | Map of VNet key to flow log resource name |
+| resources | Map of vnet\_key => curated flow log attributes. Explicit field list on purpose: exposing the raw resource object surfaced the provider-deprecated network\_security\_group\_id attribute (legacy NSG-attached model) and emitted a 'Deprecated value used' warning even though this module uses the VNet model via target\_resource\_id. |
+| role\_assignment\_ids | Map of '<vnet\_key>.<assignment\_key>' to role assignment resource ID |
+<!-- END_TF_DOCS -->

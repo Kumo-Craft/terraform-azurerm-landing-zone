@@ -140,3 +140,64 @@ At least one of `contact_emails` / `contact_groups` / `contact_roles` per notifi
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: derived naming, name override, multi-notification (Actual+Forecasted), filter block, optional lock (both scopes), subscription scope (bare GUID + full path, normalization asserted), and validators (empty/no-contact notifications, bad start_date/time_grain/rg_id, XOR both-set and neither-set). Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_consumption_budget_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group) | resource |
+| [azurerm_consumption_budget_subscription.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_subscription) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| amount | Budget amount in the billing account currency. | `number` | n/a | yes |
+| notifications | Threshold notifications. 1 to 5 blocks (Azure Portal limit; kept as a conservative guard). threshold is a percentage in (0, 1000]. Each block needs >=1 contact (email/group/role). Note: it's a set-nesting block — two identical notifications collapse into one. | <pre>list(object({<br>    enabled        = optional(bool, true)<br>    threshold      = number<br>    operator       = optional(string, "GreaterThan") # GreaterThan | EqualTo | GreaterThanOrEqualTo<br>    threshold_type = optional(string, "Actual")      # Actual | Forecasted<br>    contact_emails = optional(list(string), [])<br>    contact_groups = optional(list(string), []) # Action Group resource IDs<br>    contact_roles  = optional(list(string), []) # RBAC role names: Owner/Contributor/Reader<br>  }))</pre> | n/a | yes |
+| start\_date | Budget start date, ISO-8601, first day of a month, UTC (e.g. 2026-07-01T00:00:00Z).<br>Immutable once set (ForceNew) — NEVER derive it from timestamp(), or the budget is<br>recreated on every plan.<br><br>⚠️ Azure constraint NOT checkable at plan time (depends on the apply date): a PAST<br>start\_date must fall within the current time\_grain period — e.g. with Monthly grain,<br>a start\_date in an already-elapsed month can be rejected by the service. Pick the<br>first day of the current (or a future) period. Must also be >= 2017-06-01. | `string` | n/a | yes |
+| end\_date | Optional budget end date (ISO-8601 UTC). Null = provider default (~10y after start). | `string` | `null` | no |
+| environment | Environment code (prod / nprd). | `string` | `null` | no |
+| filter | Optional budget filter (restrict to dimensions/tags). Null = whole RG scope. dimension/tag operator must be 'In'. | <pre>object({<br>    dimensions = optional(list(object({<br>      name     = string<br>      operator = optional(string, "In")<br>      values   = list(string)<br>    })), [])<br>    tags = optional(list(object({<br>      name     = string<br>      operator = optional(string, "In")<br>      values   = list(string)<br>    })), [])<br>  })</pre> | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) applied to the budget. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Explicit name override (escape hatch). If null, derived via ../Naming (bdg-{acr}-{env}-{region}-{workload}). | `string` | `null` | no |
+| region\_code | Region code (e.g. gwc). | `string` | `null` | no |
+| resource\_group\_id | Resource-group scope: full ARM ID (/subscriptions/../resourceGroups/..). Mutually exclusive with subscription\_id — set EXACTLY one. | `string` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con, api). | `string` | `null` | no |
+| subscription\_id | Subscription scope. Accepts either a bare GUID or the full /subscriptions/<guid> path (normalized in main.tf). Mutually exclusive with resource\_group\_id — set EXACTLY one. | `string` | `null` | no |
+| tags | Tags. NOTE: azurerm\_consumption\_budget\_* has no tags argument (budgets don't persist tags server-side); kept for module-interface consistency, not applied to any resource. | `map(string)` | `{}` | no |
+| time\_grain | Reset period. One of: Monthly, Quarterly, Annually, BillingMonth, BillingQuarter, BillingAnnual. Immutable (ForceNew). | `string` | `"Monthly"` | no |
+| workload | Workload name (naming suffix segment). | `string` | `"budget"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | Resource ID of the budget (whichever scope is in use). |
+| lock\_ids | Map of lock key => management lock ID (empty map when var.lock is null). |
+| name | Full budget name. |
+| resources | The resource-group budget object (null when subscription-scoped). |
+| subscription\_budget | The subscription budget object (null when RG-scoped). |
+<!-- END_TF_DOCS -->

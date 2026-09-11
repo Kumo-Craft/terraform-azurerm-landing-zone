@@ -97,3 +97,64 @@ inputs = {
 ## Testing
 
 `tests/basic.tftest.hcl` — plan-time, `mock_provider "azurerm"`: secure-default posture, connectors off by default, connectors opt-in. Run: `terraform init -backend=false && terraform test`.
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| law | ../LogAnalyticsWorkspace | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_sentinel_data_connector_azure_active_directory.entra](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sentinel_data_connector_azure_active_directory) | resource |
+| [azurerm_sentinel_data_connector_azure_security_center.defender](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sentinel_data_connector_azure_security_center) | resource |
+| [azurerm_sentinel_log_analytics_workspace_onboarding.sentinel](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sentinel_log_analytics_workspace_onboarding) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| environment | Environment (prod/nprd). | `string` | n/a | yes |
+| location | Azure region. | `string` | n/a | yes |
+| region\_code | Region short code (e.g. 'gwc'). | `string` | n/a | yes |
+| resource\_group\_name | Resource group hosting the Sentinel LAW. | `string` | n/a | yes |
+| subscription\_acronym | Subscription acronym (e.g. 'sec'). | `string` | n/a | yes |
+| connector\_subscription\_id | Subscription id for the Defender for Cloud connector. Null = current subscription. | `string` | `null` | no |
+| connector\_tenant\_id | Tenant id for the Entra ID connector. Null = current tenant. | `string` | `null` | no |
+| connectors | Toggle built-in Sentinel data connectors. Off by default (permission-dependent). | <pre>object({<br>    entra_id           = optional(bool, false) # Microsoft Entra ID (sign-in/audit) — needs tenant Global/Security Reader<br>    defender_for_cloud = optional(bool, false) # Microsoft Defender for Cloud (subscription alerts)<br>  })</pre> | `{}` | no |
+| daily\_quota\_gb | Daily ingestion cap in GB. -1 = NO cap (recommended for a Sentinel workspace — a cap blinds the SOC on a spike). | `number` | `-1` | no |
+| enable\_cmk | Customer-managed key for Sentinel onboarding. Requires a pre-existing CMK-enabled dedicated LA cluster (>=100 GB/day) + Key Vault — see comment. Leave false otherwise (MMK still encrypts at rest). | `bool` | `false` | no |
+| law\_internet\_ingestion\_enabled | Allow public ingestion. false = private only (via AMPLS). | `bool` | `false` | no |
+| law\_internet\_query\_enabled | Allow public query. false = private only (via AMPLS). | `bool` | `false` | no |
+| law\_local\_authentication\_disabled | Disable workspace-key (local) auth → Entra ID only. | `bool` | `true` | no |
+| log\_retention\_days | Interactive retention (days) for the Sentinel workspace. | `number` | `90` | no |
+| tags | Tags. | `map(string)` | `{}` | no |
+| workload | Workload/instance suffix for naming. | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| law\_id | Resource id of the Sentinel Log Analytics Workspace (for AMPLS scoped service). |
+| law\_name | Name of the Sentinel LAW. |
+| law\_workspace\_id | Workspace (customer) id — GUID. |
+| resource\_group\_name | RG hosting the Sentinel LAW. |
+<!-- END_TF_DOCS -->

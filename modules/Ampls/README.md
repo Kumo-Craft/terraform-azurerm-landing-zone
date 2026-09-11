@@ -155,3 +155,71 @@ inputs = {
 | private_ip_address | The private IP address of the AMPLS private endpoint |
 | lock_id | The ID of the management lock, if applied |
 | role_assignment_ids | Map of role assignment key => role assignment ID |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| private\_endpoint | ../PrivateEndpoint | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_private_link_scope.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_private_link_scope) | resource |
+| [azurerm_monitor_private_link_scoped_service.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_private_link_scoped_service) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| private\_dns\_zone\_ids | List of private DNS zone IDs for the PE DNS zone group | `list(string)` | n/a | yes |
+| resource\_group\_name | Name of the resource group | `string` | n/a | yes |
+| scoped\_services | Map of services to link to the AMPLS (e.g. law, dce). Key = logical name. | <pre>map(object({<br>    resource_id = string<br>  }))</pre> | n/a | yes |
+| subnet\_id | Subnet ID for the private endpoint | `string` | n/a | yes |
+| environment | Environment (e.g. prod, nprd). Used for computed naming when var.name is null. | `string` | `null` | no |
+| ingestion\_access\_mode | AMPLS ingestion access mode: Open or PrivateOnly | `string` | `"PrivateOnly"` | no |
+| lock | Controls the Resource Lock configuration for the AMPLS resource.<br><br>- `kind` - (Required) "CanNotDelete" or "ReadOnly".<br>- `name` - (Optional) Lock name. Generated from kind if not specified. | <pre>object({<br>    kind = string<br>    name = optional(string)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name for the AMPLS. If null, computed from naming components (pls-{acr}-{env}-{region}-{workload}). | `string` | `null` | no |
+| query\_access\_mode | AMPLS query access mode: Open or PrivateOnly | `string` | `"PrivateOnly"` | no |
+| region\_code | Region code (e.g. gwc, weu). Used for computed naming when var.name is null. | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the AMPLS scope. Default principal\_type='ServicePrincipal'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string)<br>    condition_version                = optional(string)<br>    description                      = optional(string)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm). Used for computed naming when var.name is null. | `string` | `null` | no |
+| tags | Tags to apply to all resources | `map(string)` | `{}` | no |
+| workload | Workload component (e.g. management). Used for computed naming when var.name is null. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| id | The ID of the Azure Monitor Private Link Scope |
+| lock\_id | The ID of the management lock, if applied |
+| private\_endpoint\_id | The ID of the AMPLS private endpoint |
+| private\_ip\_address | The private IP address of the AMPLS private endpoint |
+| resource | The complete AMPLS resource object |
+| role\_assignment\_ids | Map of role assignment key => role assignment ID |
+| scoped\_service\_ids | Map of scoped service key => scoped service resource ID |
+<!-- END_TF_DOCS -->

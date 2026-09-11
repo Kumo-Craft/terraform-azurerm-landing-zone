@@ -100,3 +100,71 @@ private_dns_zone_ids = [
 | resource | Complete Azure Monitor Workspace resource object |
 | private_endpoint_id | The ID of the Private Endpoint (null if no PE) |
 | private_endpoint_ip | The private IP address of the Private Endpoint |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azurerm | ~> 4.0 |
+| time | >= 0.9.0 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| lock | ../ResourceLock | n/a |
+| naming | ../Naming | n/a |
+| rbac | ../RoleAssignment | n/a |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_monitor_workspace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_workspace) | resource |
+| [azurerm_private_endpoint.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_endpoint) | resource |
+| [time_static.time](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| location | Azure region | `string` | n/a | yes |
+| resource\_group\_name | Resource group name | `string` | n/a | yes |
+| environment | Environment (e.g. prod, nprd) | `string` | `null` | no |
+| lock | Optional resource lock (CanNotDelete / ReadOnly) on the Azure Monitor Workspace. AMW is critical observability infrastructure — CanNotDelete recommended for prod. Set to null to skip. | <pre>object({<br>    kind = string<br>    name = optional(string, null)<br>  })</pre> | `null` | no |
+| name | Optional. Explicit name. If null, computed from naming components. | `string` | `null` | no |
+| private\_dns\_zone\_ids | Optional. IDs de zones DNS privées à lier au Private Endpoint via un private\_dns\_zone\_group. Pour Managed Prometheus la zone est régionale : privatelink.<region>.prometheus.monitor.azure.com. Liste vide (défaut) = le zone group est laissé à la policy DINE ALZ (private\_dns\_zone\_group reste ignoré via lifecycle). | `list(string)` | `[]` | no |
+| public\_network\_access\_enabled | Whether public network access is enabled | `bool` | `false` | no |
+| region\_code | Region code (e.g. gwc, weu) | `string` | `null` | no |
+| role\_assignments | Map of role assignments at the AMW scope. Common AMW roles: 'Monitoring Reader' (Grafana managed identity), 'Monitoring Metrics Publisher' (AKS node pool MI), 'Azure Monitor Workspace Contributor' (Prometheus config). Default principal\_type='ServicePrincipal'. | <pre>map(object({<br>    role_definition_id_or_name       = string<br>    principal_id                     = string<br>    principal_type                   = optional(string, "ServicePrincipal")<br>    condition                        = optional(string, null)<br>    condition_version                = optional(string, null)<br>    description                      = optional(string, null)<br>    skip_service_principal_aad_check = optional(bool, false)<br>  }))</pre> | `{}` | no |
+| subnet\_id | Subnet ID for the Private Endpoint. If null, no PE is created. | `string` | `null` | no |
+| subscription\_acronym | Subscription acronym (e.g. mgm, con) | `string` | `null` | no |
+| tags | Tags to apply | `map(string)` | `{}` | no |
+| workload | Workload suffix (e.g. 01) | `string` | `"01"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| default\_data\_collection\_endpoint\_id | The default Data Collection Endpoint ID |
+| default\_data\_collection\_rule\_id | The default Data Collection Rule ID |
+| id | The ID of the Azure Monitor Workspace |
+| lock\_id | Management lock ID (null if var.lock is null) |
+| name | The name of the Azure Monitor Workspace |
+| private\_endpoint\_id | The ID of the Private Endpoint (null if no PE) |
+| private\_endpoint\_ip | The private IP address of the Private Endpoint |
+| query\_endpoint | The query endpoint for the Azure Monitor Workspace |
+| resource | The complete Azure Monitor Workspace resource object |
+| role\_assignment\_ids | Map of role assignment logical key => role assignment ID |
+<!-- END_TF_DOCS -->

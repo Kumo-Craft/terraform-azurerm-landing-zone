@@ -101,3 +101,51 @@ inputs = {
 | identity_assignment_ids | Map of key => role assignment ID for identities |
 | group_resources | Map of key => complete role assignment object for groups |
 | identity_resources | Map of key => complete role assignment object for identities |
+
+## Reference
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.12.0 |
+| azuread | ~> 3.8 |
+| azurerm | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| azuread | ~> 3.8 |
+| azurerm | ~> 4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [azurerm_role_assignment.groups](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
+| [azurerm_role_assignment.identities](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
+| [azuread_group.this](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/data-sources/group) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| group\_assignments | A map of role assignments for Entra ID groups (resolved by display\_name).<br>The map key is deliberately arbitrary to avoid plan-time issues.<br><br>- `group_name`                 - (Required) Entra ID group display name.<br>- `scope`                      - (Required) Azure resource ID to assign the role on.<br>- `role_definition_id_or_name` - (Required) Role definition ID or name.<br>- `condition`                  - (Optional) ABAC condition.<br>- `condition_version`          - (Optional) Condition version ("1.0" or "2.0").<br>- `description`                - (Optional) Assignment description. | <pre>map(object({<br>    group_name                 = string<br>    scope                      = string<br>    role_definition_id_or_name = string<br>    condition                  = optional(string)<br>    condition_version          = optional(string)<br>    description                = optional(string)<br>  }))</pre> | `{}` | no |
+| identity\_assignments | A map of role assignments for any Entra principal (MI, SP, Group, User) — addressed by object ID.<br>The map key is deliberately arbitrary to avoid plan-time issues.<br><br>- `principal_id`                     - (Required) Object ID of the principal.<br>- `scope`                            - (Required) Azure resource ID to assign the role on.<br>- `role_definition_id_or_name`       - (Required) Role definition ID or name.<br>- `principal_type`                   - (Optional) "User" \| "Group" \| "ServicePrincipal". Required when<br>                                       assigning to a group (Azure rejects with UnmatchedPrincipalType).<br>                                       Accepted values: User, Group, ServicePrincipal.<br>                                       ForeignGroup and Device appear in Azure REST API + portal docs but are NOT<br>                                       accepted by the azurerm provider as of v4.x — intentionally excluded from<br>                                       this enum. Re-verify when next pinning provider (4.76+).<br>- `condition`                        - (Optional) ABAC condition.<br>- `condition_version`                - (Optional) Condition version ("1.0" or "2.0").<br>- `description`                      - (Optional) Assignment description.<br>- `skip_service_principal_aad_check` - (Optional) Skip AAD check. Defaults to false.<br>- `delegated_managed_identity_resource_id` - (Optional) Resource ID of a delegated managed identity for cross-tenant role assignments. | <pre>map(object({<br>    principal_id                           = string<br>    scope                                  = string<br>    role_definition_id_or_name             = string<br>    principal_type                         = optional(string)<br>    condition                              = optional(string)<br>    condition_version                      = optional(string)<br>    description                            = optional(string)<br>    skip_service_principal_aad_check       = optional(bool, false)<br>    delegated_managed_identity_resource_id = optional(string)<br>  }))</pre> | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| group\_assignment\_ids | Map of key => role assignment ID for Entra ID groups |
+| group\_resources | Map of key => complete role assignment object for groups |
+| identity\_assignment\_ids | Map of key => role assignment ID for managed identities |
+| identity\_resources | Map of key => complete role assignment object for identities |
+| resources | Combined map of all role assignment resources (groups + identities merged by their map keys). Pattern: post-v0.2.74 canonical. |
+<!-- END_TF_DOCS -->
